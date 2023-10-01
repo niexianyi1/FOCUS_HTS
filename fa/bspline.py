@@ -23,7 +23,7 @@ def get_bc_init(ns):
 
 
 # 如果在这里不考虑闭合线圈，不计入重合点，ns
-# 但是输入线圈需要一个重合点，后续计算不计入
+# 但是输入线圈需要一个重合点，后续计算不计入, coil: [nc/nfp,ns+1,3]
 def tcku(coil, nc, ns, k):   
     t = np.zeros(ns+k+1)
     c = np.zeros((nc, 3, ns))
@@ -40,7 +40,7 @@ def tcku(coil, nc, ns, k):
     for i in range(ns-8):
         X = X.at[i+4, i+3:i+6].set([1/6, 2/3, 1/6])
     for i in range(nc):
-        x0 = coil[i, :-1, 0]         # coil: [nc/nfp,ns+1,3]
+        x0 = coil[i, :-1, 0]         
         y0 = coil[i, :-1, 1]
         z0 = coil[i, :-1, 2]
 
@@ -163,18 +163,23 @@ def der3_splev(bc, wrk2):    # 三阶导数
     der3 = der3.at[m-1, :].set(der3[m-3, :])
     return der3
 
+## 不保留对称项，只计算一周期
 def close(bc, c, nc, ns):
     xyz = vmap(lambda c : splev(bc, c), in_axes=0, out_axes=0)(c)
     x0 = xyz[:, :, 0]
     x1 = x0[:, :4]
     x = np.append(x0, x1)
+    x = np.reshape(x, (nc, ns+1))
     y0 = xyz[:, :, 1]
     y1 = y0[:, :4]
     y = np.append(y0, y1)
+    y = np.reshape(y, (nc, ns+1))
     z0 = xyz[:, :, 2]
     z1 = z0[:, :4]
     z = np.append(z0, z1)
+    z = np.reshape(z, (nc, ns+1))
     coil = np.array([x, y, z])
+    coil = np.transpose(coil, (1, 2, 0))
     c_new, bc_new = tcku(coil, nc, ns, 3)
     return c_new, bc_new
 

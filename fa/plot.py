@@ -36,9 +36,10 @@ class plot:
     ### 传入的参数c，不包含重复点，即为ns，主动添加重复后画图；
     ### 或者只在迭代结束后画图时，将参数c转为闭合
     def plot_coils(self, c):    # 线圈
-        c, bc = bspline.close(self.bc, c, self.nc, self.ns+3)
-        t, u, k = bc
-        
+        # c, bc = bspline.close(self.bc, c, self.ncnfp, self.ns+3)
+        t, u, k = self.bc
+        self.nps = 65
+
         # ----- rc_bspline -----
         u = np.linspace(0, 1, self.nps)
         rc_bspline = np.zeros((self.nc, 3, self.nps))
@@ -49,6 +50,7 @@ class plot:
 
         rc_bspline = np.transpose(rc_bspline, (0, 2, 1))
         rc_bspline = np.reshape(rc_bspline, (self.nps*self.nc, 3))
+        
         # np.save('/home/nxy/codes/FOCUSADD_B/results/bnormal/w7x_highres_rc_1000.npy', rc_bspline)   # 保存数据
         
         # ----- rc_initial -----       # 如果从已优化线圈开始，可以进行对比
