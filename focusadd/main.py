@@ -104,9 +104,9 @@ if __name__ == "__main__":
     params = (get_params_c(opt_state_c), get_params_fr(opt_state_fr))
 
 
-    # np.save('/home/nxy/codes/focusadd-spline/results/w7x/w7x_circle_coil_params_1000.npy', params[0])
-    # np.save('/home/nxy/codes/focusadd-spline/results/w7x/w7x_circle_fr_1000.npy', params[1])
-    # np.save('/home/nxy/codes/focusadd-spline/results/w7x/w7x_circle_loss_vals_1000.npy', loss_vals)
+    np.save('/home/nxy/codes/focusadd-spline/results/circle/w7x_circle_coil_params_400.npy', params[0])
+    np.save('/home/nxy/codes/focusadd-spline/results/circle/w7x_circle_fr_400.npy', params[1])
+    np.save('/home/nxy/codes/focusadd-spline/results/circle/w7x_circle_loss_vals_400.npy', loss_vals)
 
 
     coilset.write_hdf5(params, args['out_hdf5'])
