@@ -3,13 +3,13 @@ import json
 
 args = {
     # 优化器参数
-    'n': 1,          # int, "--number_iter"
+    'n': 5,            # int, "--number_iter"
                         # 优化器迭代次数
-    'lr': 2.5e-5,         # float, "--learning_rate_c"
+    'lr': 2.5e-5,       # float, "--learning_rate_c"
                         # 参数c 迭代步长
     'lrfr': 1.0,        # float, "--learning_rate_fr"
                         # 参数fr 迭代步长
-    'opt': 'momentum',   # str, "--optimizer"
+    'opt': 'momentum',  # str, "--optimizer"
                         # "Name of optimizer. Either SGD, GD (same), Momentum, or Adam"
     'mom': 0.9,         # float, "--momentum_mass"
                         # Momentum mass parameter.
@@ -51,7 +51,7 @@ args = {
     # loss function 权重参数
     'wb': 1,        # float, "--weight_Bnormal"
                     # 法向磁场分量 权重
-    'wl': 0,        # float, "--weight_length"
+    'wl': 0.5,        # float, "--weight_length"
                     # 总长度 权重
     'wdcc': 0,      # float, "--weight_distance_coil_coil"
                     # 线圈间距 权重
@@ -64,9 +64,9 @@ args = {
                     # 是否画初始线圈和优化线圈的对比图
     'log': False,   # bool, "--log10(lossvals)"
                     # 是否画损失函数值的对数图  
-    'r0': [5.8],      # list, 
+    'r0': [6],      # list, 
                     # 画poincare图时的起点径向坐标
-    'z0': [0],      # list,
+    'z0': [0.2],      # list,
                     # 画poincare图时的起点z 向坐标
     'phi0': 0,      # float,
                     # 画poincare图时的环向坐标
@@ -80,18 +80,35 @@ args = {
     # 文件
     'init_option': 'init_coil',
     # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
-    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/w7x_highres_bc.npy',       
+
+    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy',       
     # str, makegird 类型, 初始线圈文件名
-    'init_c': '/home/nxy/codes/focusadd-spline/results/circle/w7x_circle_coil_params_1000.npy',
-    # str, 初始参数c文件名
+
+    'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_200.npy',
+    # str, 初始参数c文件名    
+
+    'surface_r': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy',
+    'surface_nn': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy',
+    'surface_sg': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_sg_surf.npy',
+    # str, 磁面参数文件名
+
     'axis_file': 'None',        
     # str,  "Name of axis file"
-    'out_hdf5': 'out_hdf5',        
+
+    'out_hdf5': '/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_400',        
     # str, 输出线圈参数文件名
-    'out_coil_makegrid': 'out_coil_makegrid',
-    # str, makegrid 类型, 输出线圈文件名              
-    'out_loss': 'out_loss',         
+
+    'out_coil_makegrid': '/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_400',
+    # str, makegrid 类型, 输出线圈文件名 
+                 
+    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_400.npy',         
     # str, 输出损失函数值（lossvals）文件名
+
+    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_400.npy',
+    # str, 输出参数c文件名
+
+    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_400.npy'
+    # str, 输出参数fr文件名
 
 }
 

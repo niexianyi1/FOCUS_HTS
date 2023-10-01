@@ -1,67 +1,61 @@
 import jax.numpy as np
-from jax import jit
+from jax import vmap
 import scipy
 
-@jit
+#### 有问题，需要返回多少，ns 还是 ns+1
+
+
 def get_c_init(init_coil, nc, ns):       
     coil = np.load("{}".format(init_coil))
     c, bc  = tcku(coil, nc, ns, 3)
     return c, bc 
 
-@jit
+
 def get_bc_init(ns):
-    N = ns+3
     k = 3
-    t = np.zeros(N+k+1)
-    u = np.zeros(N)  
-    t = t.at[N:N+k+1].set(1)
-    t = t.at[(k+1):N].set(np.arange(2/(N-1),(N-2)/(N-1),1/(N-1)))
-    u = np.arange(0,N/(N-1),1/(N-1))
+    t = np.zeros(ns+k+1)
+    u = np.zeros(ns)  
+    t = t.at[ns:ns+k+1].set(1)
+    t = t.at[(k+1):ns].set(np.linspace(2/(ns-1), (ns-3)/(ns-1), ns-4))
+    u = np.linspace(0, 1, ns)
     bc = [t, u, k]
     return bc
 
 
-
-
-@jit
+# 如果在这里不考虑闭合线圈，不计入重合点，ns
+# 但是输入线圈需要一个重合点，后续计算不计入
 def tcku(coil, nc, ns, k):   
-    N = ns+3
-    t = np.zeros(N+k+1)
-    c = np.zeros((nc, 3, N))
-    u = np.zeros(N)    
-    X = np.zeros((N, N))
+    t = np.zeros(ns+k+1)
+    c = np.zeros((nc, 3, ns))
+    u = np.zeros(ns)    
+    X = np.zeros((ns, ns))
     X = X.at[0, 0].set(1)
     X = X.at[1, 0:4].set([1/8, 37/72, 23/72, 1/24])
     X = X.at[2, 1:4].set([1/9, 5/9, 1/3])
     X = X.at[3, 2:5].set([1/8, 17/24, 1/6])
-    X = X.at[N-4, N-5:N-2].set([1/6, 17/24, 1/8])
-    X = X.at[N-3, N-4:N-1].set([1/3, 5/9, 1/9])
-    X = X.at[N-2, N-4:N].set([1/24, 23/72, 37/72, 1/8])
-    X = X.at[N-1, N-1].set(1)
-    for i in range(N-8):
+    X = X.at[ns-4, ns-5:ns-2].set([1/6, 17/24, 1/8])
+    X = X.at[ns-3, ns-4:ns-1].set([1/3, 5/9, 1/9])
+    X = X.at[ns-2, ns-4:ns].set([1/24, 23/72, 37/72, 1/8])
+    X = X.at[ns-1, ns-1].set(1)
+    for i in range(ns-8):
         X = X.at[i+4, i+3:i+6].set([1/6, 2/3, 1/6])
     for i in range(nc):
-        x0 = coil[i, :, 0]         #重复3个点
-        x1 = x0[1:3]
-        x0 = np.append(x0, x1)
-        y0 = coil[i, :, 1]
-        y1 = y0[1:3]
-        y0 = np.append(y0, y1)
-        z0 = coil[i, :, 2]
-        z1 = z0[1:3]
-        z0 = np.append(z0, z1)
+        x0 = coil[i, :-1, 0]         # coil: [nc/nfp,ns+1,3]
+        y0 = coil[i, :-1, 1]
+        z0 = coil[i, :-1, 2]
+
         cx = scipy.linalg.solve(X, x0)
         cy = scipy.linalg.solve(X, y0)
         cz = scipy.linalg.solve(X, z0)
         c = c.at[i,:,:].set([cx, cy, cz])
 
-    t = t.at[N:N+k+1].set(1)
-    t = t.at[(k+1):N].set(np.arange(2/(N-1),(N-2)/(N-1),1/(N-1)))
-    u = np.arange(0,N/(N-1),1/(N-1))
+    t = t.at[ns:ns+k+1].set(1)
+    t = t.at[(k+1):ns].set(np.linspace(2/(ns-1), (ns-3)/(ns-1), ns-4))
+    u = np.linspace(0,1,ns)
     bc = [t, u, k]
     return c, bc
 
-@jit
+
 def splev(bc, c):            # 矩阵形式计算,与tcku配合 
     t, u, k = bc   
     m = len(u)  
@@ -74,7 +68,6 @@ def splev(bc, c):            # 矩阵形式计算,与tcku配合
     mat_3 = np.array([[1/6, 17/24, 1/8, 0], [-1/2, 1/8, 3/8, 0], [1/2, -7/8, 3/8, 0], [1/6, 3/8, -23/72, 1/12]])     #u[m-4]
     mat_2 = np.array([[1/3, 5/9, 1/9, 0], [-1/2, 1/6, 1/3, 0], [1/4, -7/12, 1/3, 0], [-1/24, 13/72, -19/72, 1/8]])  #u[m-3] and u[m-2]
     mat_1 = np.array([[0, 0, 0, 1],[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])        #u[m-1]
-
     xyz = xyz.at[0,:].set(np.dot(mat1[0], c[:,0:4].T))
     x1 = (u[1] - t[3])*(m-1)
     X1 = np.array([1, x1, x1*x1, x1*x1*x1])
@@ -91,8 +84,8 @@ def splev(bc, c):            # 矩阵形式计算,与tcku配合
     B_2 = np.dot(X_2, mat_2) 
     xyz = xyz.at[m-2,:].set(np.dot(B_2, c[:,m-4:m].T))
     xyz = xyz.at[m-1,:].set(np.dot(mat_1[0], c[:,m-4:m].T))
-    return xyz[0:m-2, :]
-@jit
+    return xyz
+
 def der1_splev(bc, c):       # 一阶导数  
     t, u, k = bc   
     m = len(u)  
@@ -123,9 +116,8 @@ def der1_splev(bc, c):       # 一阶导数
     B_2 = np.dot(X_2, mat_2) 
     der1 = der1.at[m-2,:].set(np.dot(B_2, wrk1[:,m-4:m-1].T))
     der1 = der1.at[m-1,:].set(np.dot(mat_1[0], wrk1[:,m-4:m-1].T))
-    der1 = der1.at[0, :].set(der1[m-3, :])
-    return der1[0:m-2, :], wrk1
-@jit
+    return der1, wrk1
+
 def der2_splev(bc, wrk1):    # 二阶导数 
     t, u, k = bc 
     m = len(u)  
@@ -154,9 +146,8 @@ def der2_splev(bc, wrk1):    # 二阶导数
     B_2 = np.dot(X_2, mat_2) 
     der2 = der2.at[m-2,:].set(np.dot(B_2, wrk2[:,m-4:m-2].T))
     der2 = der2.at[m-1,:].set(np.dot(mat_1[0], wrk2[:,m-4:m-2].T))
-    der2 = der2.at[0, :].set(der2[m-3, :])
-    return der2[0:m-2, :], wrk2
-@jit
+    return der2, wrk2
+
 def der3_splev(bc, wrk2):    # 三阶导数    
     t, u, k = bc  
     m = len(u)  
@@ -170,7 +161,22 @@ def der3_splev(bc, wrk2):    # 三阶导数
         der3 = der3.at[i, :].set(wrk3[:, i-1].T)
     der3 = der3.at[m-2, :].set(der3[m-3, :])
     der3 = der3.at[m-1, :].set(der3[m-3, :])
-    der3 = der3.at[0, :].set(der3[m-3, 0])
-    return der3[0:m-2, :]
+    return der3
+
+def close(bc, c, nc, ns):
+    xyz = vmap(lambda c : splev(bc, c), in_axes=0, out_axes=0)(c)
+    x0 = xyz[:, :, 0]
+    x1 = x0[:, :4]
+    x = np.append(x0, x1)
+    y0 = xyz[:, :, 1]
+    y1 = y0[:, :4]
+    y = np.append(y0, y1)
+    z0 = xyz[:, :, 2]
+    z1 = z0[:, :4]
+    z = np.append(z0, z1)
+    coil = np.array([x, y, z])
+    c_new, bc_new = tcku(coil, nc, ns, 3)
+    return c_new, bc_new
+
 
 

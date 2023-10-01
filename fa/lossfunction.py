@@ -1,17 +1,18 @@
+import jax
 import jax.numpy as np
-from jax import jit
+from jax import jit, vmap
 from jax.config import config
-import coilset
 config.update("jax_enable_x64", True)
-
+import plot
+import coilpy
 pi = np.pi
 
 # 用class包括所有的loss function.
 class LossFunction:
 
-    def __init__(self, args, surface_data, B_extern, I):  # 不够再加
+    def __init__(self, args, surface_data, B_extern):  # 不够再加
         r_surf, nn, sg = surface_data
-
+        self.args = args
         self.r_surf = r_surf
         self.nn = nn
         self.sg = sg
@@ -24,11 +25,10 @@ class LossFunction:
         self.wl = args['wl']
         self.wdcc = args['wdcc']
         self.B_extern = B_extern
-        self.I = I
         self.nznfp = int(self.nz / self.nfp)
         return 
 
-    def loss(self, coil_output_func, params, I):
+    def loss(self, coil_output_func, params):
         """ 
         Computes the default loss: int (B dot n)^2 dA + weight_length * len(coils) 
 
@@ -37,13 +37,14 @@ class LossFunction:
         Output: A scalar, which is the loss_val computed by the function. JAX will eventually differentiate
         this in an optimizer.
         """
-        I, dl, r_coil = coil_output_func(params, I = I)
+        I, dl, r_coil = coil_output_func(params)
         self.I = I
         self.dl = dl
         self.r_coil = r_coil
         B_loss_val = LossFunction.quadratic_flux(self)
+        length = LossFunction.average_length(self)
 
-        return self.wb * B_loss_val 
+        return self.wb * B_loss_val + self.wl * length 
 
 
     @jit
@@ -79,7 +80,8 @@ class LossFunction:
         return (
             0.5
             * np.sum(np.sum(self.nn * B_all, axis=-1) ** 2 * self.sg)
-        )  # NZ x NT
+        )  # NZ x NTf   
+
 
     @jit
     def biotSavart(self):
@@ -95,26 +97,17 @@ class LossFunction:
 
 		A NZ x NT x 3 array which is the magnetic field vector on the surface points 
 		"""
-        mu_0 = 1.0
-        # self.I = self.I[:int(self.nc/self.nfp)]
+        mu_0 = 1
         mu_0I = self.I * mu_0
-        mu_0Idl = (
-            mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * self.dl
-        )  # NC x NS x NNR x NBR x 3
-        r_minus_l = (
-            self.r_surf[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis, :]
-            - self.r_coil[:, np.newaxis, np.newaxis, :, :, :, :]
-        )  # NC x NZ/nfp x NT x NS x NNR x NBR x 3
-        top = np.cross(
-            mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l
-        )  # NC x NZ x NT x NS x NNR x NBR x 3
-        bottom = (
-            np.linalg.norm(r_minus_l, axis=-1) ** 3
-        )  # NC x NZ x NT x NS x NNR x NBR
-        B = np.sum(
-            top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5)
-        )  # NZ x NT x 3
+        mu_0Idl = (mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * self.dl)  # NC x NS x NNR x NBR x 3
+        r_minus_l = (self.r_surf[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis, :]
+            - self.r_coil[:, np.newaxis, np.newaxis, :, :, :, :])  # NC x NZ/nfp x NT x NS x NNR x NBR x 3
+        top = np.cross(mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l)  # NC x NZ x NT x NS x NNR x NBR x 3
+        bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NS x NNR x NBR
+        B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5))  # NZ x NT x 3
         return B
+
+
 
     @jit
     def normalized_error(r, I, dl, l, nn, sg, B_extern = None):
@@ -129,7 +122,7 @@ class LossFunction:
         return np.sum( (B_n / B_mag) * sg ) / A
 
 
-    def compute_torsion(der1, der2, der3):       # new
+    def torsion(der1, der2, der3):       # new
         cross12 = np.cross(der1, der2)
         top = (
             cross12[:, :, 0] * der3[:, :, 0]
@@ -137,14 +130,16 @@ class LossFunction:
             + cross12[:, :, 2] * der3[:, :, 2]
         )
         bottom = np.linalg.norm(cross12, axis=-1) ** 2
-        return top / bottom  # NC x NS+3
+        return top / bottom  # NC x NS
 
-    def compute_mean_torsion(torsion):    #new
-        return np.mean(torsion[:, :-1], axis=-1)
+    def mean_torsion(torsion):    #new
+        return np.mean(torsion, axis=-1)
 
-    def compute_average_length(self, r_centroid):      #new
-        dl_centroid = r_centroid[:, 1:, :] - r_centroid[:, :-1, :]
-        return np.sum(np.linalg.norm(dl_centroid, axis=-1)) / (self.NC)
+    def average_length(self):      #new
+        al = np.zeros_like(self.r_coil)
+        al = al.at[:, :-1, :].set(self.r_coil[:, 1:, :] - self.r_coil[:, :-1, :])
+        al = al.at[:, -1, :].set(self.r_coil[:, 0, :] - self.r_coil[:, -1, :])
+        return np.sum(np.linalg.norm(al, axis=-1)) / (self.nc)
 
 
     @jit

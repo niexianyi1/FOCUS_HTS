@@ -1,25 +1,53 @@
+import json
+import plotly.graph_objects as go
+import bspline 
 import jax.numpy as np
-from jax import jit, vmap
-import numpy 
-import tables as tb
-from jax.config import config
-import bspline
-config.update("jax_enable_x64", True)
 pi = np.pi
+from jax import vmap
 
 
 
+
+def plot_bzbt(args, B):
+    b = np.zeros((args['nz'], args['nt']))
+    for i in range(args['nz']):
+        for j in range(args['nt']):
+            b = b.at[i,j].set((B[i,j,0]**2 + B[i,j,1]**2 + B[i,j,2]**2)**0.5)
+
+    fig = go.Figure()
+    fig.add_trace(go.Contour(z=b, 
+        x=np.arange(0, 2*pi, 2*pi/args['nt']), 
+        y=np.arange(0, 2*pi, 2*pi/args['nz']), line_smoothing=1))
+
+    fig.show()
+    return
+
+def biotSavart(I, dl, r_surf, r_coil):
+    """
+    Inputs:
+
+    r : Position we want to evaluate at, NZ x NT x 3
+    I : Current in ith coil, length NC
+    dl : Vector which has coil segment length and direction, NC x NS x NNR x NBR x 3
+    l : Positions of center of each coil segment, NC x NS x NNR x NBR x 3
+
+    Returns: 
+
+    A NZ x NT x 3 array which is the magnetic field vector on the surface points 
+    """
+    mu_0 = 1.0
+    mu_0I = I * mu_0
+    mu_0Idl = (mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * dl)  # NC x NS x NNR x NBR x 3
+    r_minus_l = (r_surf[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis, :]
+        - r_coil[:, np.newaxis, np.newaxis, :, :, :, :])  # NC x NZ/nfp x NT x NS x NNR x NBR x 3
+    top = np.cross(mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l)  # NC x NZ x NT x NS x NNR x NBR x 3
+    bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NS x NNR x NBR
+    B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5))  # NZ x NT x 3
+    return B
 
 class CoilSet:
-
-    """
-	CoilSet is a class which represents all of the coils surrounding a plasma surface. The coils
-	are represented by a bspline and a fourier series, one for the coil winding pack centroid and
-    one for the rotation of the coils. 
-	"""
-
     def __init__(self, args):
-      
+        
         self.nc = args['nc']
         self.nfp = args['nfp']
         self.ns = args['ns']
@@ -31,26 +59,19 @@ class CoilSet:
         self.nr = args['nr']
         self.nfr = args['nfr']
         self.bc = args['bc']      
+        self.out_hdf5 = args['out_hdf5']
+        self.out_coil_makegrid = args['out_coil_makegrid']
         self.theta = np.linspace(0, 2*pi, self.ns+1)
         self.ncnfp = int(self.nc/self.nfp)
+        self.I = args['I']
         return
- 
+    
 
-    @jit
-    def coilset(self, params, I = None):             # 根据lossfunction的需求再添加新的输出项                   
-        """ 
-        Takes a tuple of coil parameters and sets the parameters. When the parameters are reset,
-         we need to update the other variables like the coil position, frenet frame, etc. 
+    def coilset(self, params):                           
 
-
-        """
-
-        if I == None:
-            I = np.ones(self.nc)       
         c, fr = params                                                                   
-        I_new = I / (self.nnr * self.nbr)
-        # COMPUTE COIL VARIABLES
-        r_centroid = CoilSet.compute_r_centroid(self, c)  #r_centroid :[nc, ns+3, 3]
+        I_new = self.I / (self.nnr * self.nbr)
+        r_centroid = CoilSet.compute_r_centroid(self, c)  #r_centroid :[nc, ns+1, 3]
         der1, der2, der3 = CoilSet.compute_der(self, c)
         tangent, normal, binormal = CoilSet.compute_com(self, der1, r_centroid)
         r = CoilSet.compute_r(self, fr, normal, binormal, r_centroid)
@@ -179,9 +200,9 @@ class CoilSet:
 
     def compute_frame(self, fr, N, B):  
         """
-		Computes the vectors v1 and v2 for each coil. v1 and v2 are rotated relative to
-		the normal and binormal frame by an amount alpha. Alpha is parametrized by a Fourier series.
-		"""
+        Computes the vectors v1 and v2 for each coil. v1 and v2 are rotated relative to
+        the normal and binormal frame by an amount alpha. Alpha is parametrized by a Fourier series.
+        """
         alpha = CoilSet.compute_alpha(self, fr)
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
@@ -253,100 +274,22 @@ class CoilSet:
         
         return rc_total
 
-    # def stellarator_symmetry(self, r):
-    #     rc = np.zeros((self.ncnfp*2, self.ns, self.nnr, self.nbr, 3))
-    #     rc = rc.at[0:self.ncnfp, :, :, :, :].add(r)
-       
-    #     theta = 2 * pi / self.nfp
-    #     T = np.array([[np.cos(theta), +np.sin(theta), 0], [np.sin(theta), -np.cos(theta), 0], [0, 0, -1]])
-    #     rc = rc.at[self.ncnfp:self.ncnfp*2, :, :, :, :].add(np.dot(r, T))
-    
-    #     return rc
+def bzbt(args):
 
+    r_surf = np.load(args['surface_r'])
+    c = np.load(args['out_c'])
+    bc = bspline.get_bc_init(args['ns'])
+    fr = np.zeros((2, args['nc'], args['nfr'])) 
+    args['bc'] = bc
+    params = c, fr
+    I = np.ones(args['nc'])
+    args['I'] = I
 
+    coil = CoilSet(args)
+    I_new, dl, r_coil = coil.coilset(params)
 
-    def read_makegrid(self, filename):      # 处理一下
-        r = np.zeros((self.nc, self.ns, 3))
-        with open(filename) as f:
-            _ = f.readline()
-            _ = f.readline()
-            _ = f.readline()
-            for i in range(self.nc):
-                for s in range(self.ns):
-                    x = f.readline().split()
-                    r = r.at[i, s, 0].set(float(x[0]))
-                    r = r.at[i, s, 1].set(float(x[1]))
-                    r = r.at[i, s, 2].set(float(x[2]))
-                _ = f.readline()
-        return r
-
-
-    def write_hdf5(self, params, output_file):     # 根据需求写入数据
-        """ Write coils in HDF5 output format.
-		Input:
-
-		output_file (string): Path to outputfile, string should include .hdf5 format
-
-
-		"""
-
-        c, fr = params
-        with tb.open_file(output_file, "w") as f:
-            metadata = numpy.dtype(
-                [
-                    ("nc", int),
-                    ("ns", int),
-                    ("ln", float),
-                    ("lb", float),
-                    ("nnr", int),
-                    ("nbr", int),
-                    ("rc", float),
-                    ("nr", int),
-                    ("nfr", int),
-                ]
-            )
-            arr = numpy.array(
-                [(self.nc, self.ns, self.ln, self.lb, self.nnr, self.nbr, self.rc, self.nr, self.nfr)], dtype=metadata,
-            )
-            f.create_table("/", "metadata", metadata)
-            f.root.metadata.append(arr)
-            f.create_array("/", "coilSeries", numpy.asarray(c))
-            f.create_array("/", "rotationSeries", numpy.asarray(fr))
-        return
-
-    def write_makegrid(self, params, filename):    # 或者直接输入r, I
-        I, _, r = CoilSet.coilset(self, params)
-        with open(filename, "w") as f:
-            f.write("periods {}\n".format(0))
-            f.write("begin filament\n")
-            f.write("FOCUSADD Coils\n")
-            for i in range(self.ncnfp):
-                for n in range(self.nnr):
-                    for b in range(self.nbr):
-                        for s in range(self.ns):
-                            f.write(
-                                "{} {} {} {}\n".format(
-                                    r[i, s, n, b, 0],
-                                    r[i, s, n, b, 1],
-                                    r[i, s, n, b, 2],
-                                    I[i],
-                                )
-                            )
-                        f.write(
-                            "{} {} {} {} {} {}\n".format(
-                                r[i, 0, n, b, 0],
-                                r[i, 0, n, b, 1],
-                                r[i, 0, n, b, 2],
-                                0.0,
-                                "{},{},{}".format(i, n, b),
-                                "coil/filament1/filament2",
-                            )
-                        )
-        return
-
-
-
-
-
+    B = biotSavart(I_new, dl, r_surf, r_coil)
+    plot_bzbt(args, B)
+    return
 
 
