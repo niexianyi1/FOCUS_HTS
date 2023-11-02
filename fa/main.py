@@ -93,10 +93,11 @@ if __name__ == "__main__":
 
     gradient, loss_val = update(0, opt_state_c, opt_state_fr, lossfunc)
     g_c, g_fr = gradient
-    np.save('/home/nxy/codes/focusadd-spline/gc.npy', g_c)
+    np.save('/home/nxy/codes/focusadd-spline/glc.npy', g_c)
     for i in range(args['n']-1):
         print('i = ', i+1)
         g_c, g_fr = gradient
+        print( g_fr)
         opt_state_c = opt_update_c(i, g_c, opt_state_c)
         opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
         gradient, loss_val = update(i, opt_state_c, opt_state_fr, lossfunc)
