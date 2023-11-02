@@ -1,6 +1,6 @@
 {
-    "n": 5,
-    "lr": 2.5e-05,
+    "n": 1,
+    "lr": 5e-05,
     "lrfr": 1.0,
     "opt": "momentum",
     "mom": 0.9,
@@ -19,13 +19,18 @@
     "nz": 150,
     "rs": 0.5,
     "wb": 1,
-    "wl": 0.5,
+    "wl": 0,
+    "wc": 0,
+    "wcm": 0,
+    "wt": 0,
+    "wtm": 0,
     "wdcc": 0,
+    "wdcs": 0,
     "nps": 500,
     "init": false,
     "log": false,
     "r0": [
-        6
+        5.8
     ],
     "z0": [
         0.2
@@ -34,16 +39,16 @@
     "niter": 200,
     "nstep": 1,
     "poincare_save": "None",
-    "init_option": "init_coil",
-    "init_coil": "/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy",
-    "init_c": "/home/nxy/codes/focusadd-spline/results/circle/c_200.npy",
+    "init_option": "init_c",
+    "init_coil": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_coil.npy",
+    "init_c": "/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy",
     "surface_r": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy",
     "surface_nn": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy",
     "surface_sg": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_sg_surf.npy",
     "axis_file": "None",
-    "out_hdf5": "/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_400",
-    "out_coil_makegrid": "/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_400",
-    "out_loss": "/home/nxy/codes/focusadd-spline/results/circle/loss_400.npy",
-    "out_c": "/home/nxy/codes/focusadd-spline/results/circle/c_400.npy",
-    "out_fr": "/home/nxy/codes/focusadd-spline/results/circle/fr_400.npy"
+    "out_hdf5": "/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_1000",
+    "out_coil_makegrid": "/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_1000",
+    "out_loss": "/home/nxy/codes/focusadd-spline/results/circle/loss_a1.npy",
+    "out_c": "/home/nxy/codes/focusadd-spline/results/circle/c_a1.npy",
+    "out_fr": "/home/nxy/codes/focusadd-spline/results/circle/fr_a1.npy"
 }

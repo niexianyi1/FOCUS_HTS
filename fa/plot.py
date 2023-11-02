@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import scipy.interpolate as si 
 import coilpy
-import bspline
+import bspline 
 import bzbt
 
 
@@ -12,7 +12,6 @@ class plot:
 
     def __init__(self, args) -> None:
         self.args = args
-        self.bc = args['bc']
         self.nc = args['nc']
         self.nfp = args['nfp']
         self.nps = args['nps']
@@ -36,10 +35,8 @@ class plot:
     ### 传入的参数c，不包含重复点，即为ns，主动添加重复后画图；
     ### 或者只在迭代结束后画图时，将参数c转为闭合
     def plot_coils(self, c):    # 线圈
-        # c, bc = bspline.close(self.bc, c, self.ncnfp, self.ns+3)
-        t, u, k = self.bc
-        self.nps = 65
-
+        bc = bspline.get_bc_init(c.shape[2])
+        t, u, k = bc
         # ----- rc_bspline -----
         u = np.linspace(0, 1, self.nps)
         rc_bspline = np.zeros((self.nc, 3, self.nps))
@@ -101,9 +98,9 @@ class plot:
         lenr = len(self.r0)
         lenz = len(self.z0)
         assert lenr == lenz
-        
-        rc = vmap(lambda c :bspline.splev(self.bc, c), in_axes=0, out_axes=0)(c)
-        rc = plot.symmetry(self, rc[:, :-1, :])  # rc需要调整
+        bc = bspline.get_bc_init(c.shape[2])
+        rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
+        rc = plot.symmetry(self, rc[:, :-3, :])  
         x = rc[:, :, 0]   
         y = rc[:, :, 1]
         z = rc[:, :, 2]
@@ -117,7 +114,9 @@ class plot:
         line = coilpy.misc.tracing(coil.bfield, self.r0, self.z0, self.phi0, self.niter, self.nfp, self.nstep)
 
         line = np.reshape(line, (lenr*(self.niter+1), 2))
-        fig = px.scatter(x = line[:, 0], y = line[:, 1] )
+        fig = go.Figure()
+        fig.add_scatter(x = line[:, 0], y = line[:, 1],  name='poincare', mode='markers', marker_size = 1.5)
+        fig.update_layout(scene_aspectmode='data')
         fig.show()
 
         return

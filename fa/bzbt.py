@@ -1,6 +1,6 @@
 import json
 import plotly.graph_objects as go
-import bspline 
+import bspline
 import jax.numpy as np
 pi = np.pi
 from jax import vmap
@@ -15,7 +15,7 @@ def plot_bzbt(args, B):
             b = b.at[i,j].set((B[i,j,0]**2 + B[i,j,1]**2 + B[i,j,2]**2)**0.5)
 
     fig = go.Figure()
-    fig.add_trace(go.Contour(z=b, 
+    fig.add_trace(go.Contour(z=np.log10(b), 
         x=np.arange(0, 2*pi, 2*pi/args['nt']), 
         y=np.arange(0, 2*pi, 2*pi/args['nz']), line_smoothing=1))
 
@@ -85,14 +85,14 @@ class CoilSet:
 
     def compute_r_centroid(self, c):         # rc计算的是（nc,ns+1,3）
         rc = vmap(lambda c :bspline.splev(self.bc, c), in_axes=0, out_axes=0)(c)
-        return rc
+        return rc[:, :-2, :]
 
     def compute_der(self, c):                    
         """ Computes  1,2,3 derivatives of the rc """
         der1, wrk1 = vmap(lambda c :bspline.der1_splev(self.bc, c), in_axes=0, out_axes=0)(c)
         der2, wrk2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1), in_axes=0, out_axes=0)(wrk1)
         der3 = vmap(lambda wrk2 :bspline.der3_splev(self.bc, wrk2), in_axes=0, out_axes=0)(wrk2)
-        return der1, der2, der3
+        return der1[:, :-2, :], der2[:, :-2, :], der3[:, :-2, :]
 
     def compute_com(self, der1, r_centroid):    
         """ Computes T, N, and B """
@@ -278,7 +278,7 @@ def bzbt(args):
 
     r_surf = np.load(args['surface_r'])
     c = np.load(args['out_c'])
-    bc = bspline.get_bc_init(args['ns'])
+    bc = bspline.get_bc_init(c.shape[2])
     fr = np.zeros((2, args['nc'], args['nfr'])) 
     args['bc'] = bc
     params = c, fr

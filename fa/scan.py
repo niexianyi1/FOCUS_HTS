@@ -17,6 +17,7 @@ config.update('jax_disable_jit', True)
 
 if __name__ == "__main__":
 
+
     with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
@@ -39,6 +40,8 @@ if __name__ == "__main__":
     args['I'] = I
     fr_init = np.zeros((2, args['nc'], args['nfr'])) 
 
+
+
     def args_to_op(optimizer_string, lr, mom=0.9, var=0.999, eps=1e-7):
         return {
             "gd": lambda lr, *unused: op.sgd(lr),
@@ -57,25 +60,33 @@ if __name__ == "__main__":
         nn = np.load(args['surface_nn'])
         sg = np.load(args['surface_sg'])
         # r = r[0:int(args['nz']/args['nfp']), :, :]
+
         surface_data = (r, nn, sg)
+          
         return surface_data
+
+
+
 
     @jit
     def update(i, opt_state_c, opt_state_fr, lossfunc):
-        c = get_params_c(opt_state_c)    
-        c = c.at[:, :, -3:].set(c[:, :, :3])
-        opt_state_c[0][0][0] = c
+        c = get_params_c(opt_state_c)
         fr = get_params_fr(opt_state_fr)
         params = c, fr
         loss_val, gradient = value_and_grad(
             lambda params :lossfunc.loss(coil_output_func, params),
-            allow_int = True)(params)      
-        return gradient, loss_val
+            allow_int = True
+        )(params)
+        g_c, g_fr = gradient
+        return opt_update_c(i, g_c, opt_state_c), opt_update_fr(i, g_fr, opt_state_fr), loss_val
+
 
 
     surface_data = get_surface_data(args)
     B_extern = None
 
+
+    
     coilset = CoilSet(args)
     coil_output_func = coilset.coilset
     opt_init_c, opt_update_c, get_params_c = args_to_op(
@@ -87,37 +98,33 @@ if __name__ == "__main__":
     opt_state_c = opt_init_c(c_init)
     opt_state_fr = opt_init_fr(fr_init)
 
-    lossfunc = LossFunction(args, surface_data, B_extern)
-    loss_vals = []
+    
+
+    
     start = time.time()
 
-    gradient, loss_val = update(0, opt_state_c, opt_state_fr, lossfunc)
-    g_c, g_fr = gradient
-    np.save('/home/nxy/codes/focusadd-spline/gc.npy', g_c)
-    for i in range(args['n']-1):
-        print('i = ', i+1)
-        g_c, g_fr = gradient
-        opt_state_c = opt_update_c(i, g_c, opt_state_c)
-        opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
-        gradient, loss_val = update(i, opt_state_c, opt_state_fr, lossfunc)
-        loss_vals.append(loss_val)
-        print(loss_val)
-    end = time.time()
-    print(end - start)
-    params = (get_params_c(opt_state_c), get_params_fr(opt_state_fr))
-    c = params[0]    
-    fr = params[1] 
-    c = c.at[:, :, -3:].set(c[:, :, :3])
+    for j in range(5):
+        opt_state_c = opt_init_c(c_init)
+        opt_state_fr = opt_init_fr(fr_init)
+        print('j = ', j)
+        args['wl'] = 0.02+0.02*j
+        args['out_loss'] = '/home/nxy/codes/focusadd-spline/results/circle/loss/loss_d{}.npy'.format(j)
+        args['out_c'] = '/home/nxy/codes/focusadd-spline/results/circle/loss/c_d{}.npy'.format(j)
+        args['out_fr'] = '/home/nxy/codes/focusadd-spline/results/circle/loss/fr_d{}.npy'.format(j)
+        loss_vals = []
+        lossfunc = LossFunction(args, surface_data, B_extern)
+        for i in range(args['n']):
+            print('i = ', i)
+            opt_state_c, opt_state_fr, loss_val = update(i, opt_state_c, opt_state_fr, lossfunc)
+            loss_vals.append(loss_val)
+            print(loss_val)
 
-    # np.save(args['out_c'], c)          ### c_new有3个重合控制点
-    # np.save(args['out_fr'], params[1])
-    # np.save(args['out_loss'], loss_vals)
-
-    # coilset.write_hdf5(params)
-    # coilset.write_makegrid(params)
-
-    # paint = plot.plot(args)  
-    # paint.plot_loss(loss_vals)
-    # paint.plot_coils(c)
-    # paint.poincare(c)
+        end = time.time()
+        print(end - start)
+        params = (get_params_c(opt_state_c), get_params_fr(opt_state_fr))    
+        c = params[0]
+        c_new = c.at[:, :, -3:].set(c[:, :, :3])
+        np.save(args['out_c'], params[0])          ### c_new有3个重合点
+        np.save(args['out_fr'], c_new)
+        np.save(args['out_loss'], loss_vals)
 

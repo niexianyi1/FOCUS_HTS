@@ -23,6 +23,7 @@ class CoilSet:
         self.args = args
         self.nc = args['nc']
         self.nfp = args['nfp']
+        self.ncnfp = args['ncnfp']
         self.ns = args['ns']
         self.ln = args['ln']
         self.lb = args['lb']
@@ -34,26 +35,18 @@ class CoilSet:
         self.bc = args['bc']      
         self.out_hdf5 = args['out_hdf5']
         self.out_coil_makegrid = args['out_coil_makegrid']
-        self.theta = np.linspace(0, 2*pi, self.ns)
-        self.ncnfp = int(self.nc/self.nfp)
+        self.theta = np.linspace(0, 2*pi, self.ns+1)
         self.I = args['I']
         return
  
 
     @jit
     def coilset(self, params):             # 根据lossfunction的需求再添加新的输出项                   
-        """ 
-        Takes a tuple of coil parameters and sets the parameters. When the parameters are reset,
-         we need to update the other variables like the coil position, frenet frame, etc. 
-
-
-        """
-    
-        c, fr = params                                                                   
+        c, fr = params   
         I_new = self.I / (self.nnr * self.nbr)
         # COMPUTE COIL VARIABLES
-        r_centroid = CoilSet.compute_r_centroid(self, c)  # [nc, ns, 3]
-        der1, der2, der3 = CoilSet.compute_der(self, c)   # [nc, ns, 3]
+        r_centroid = CoilSet.compute_r_centroid(self, c)  # [nc, ns+1, 3]
+        der1, der2 = CoilSet.compute_der(self, c)   # [nc, ns+1, 3]
         tangent, normal, binormal = CoilSet.compute_com(self, der1, r_centroid)
         r = CoilSet.compute_r(self, fr, normal, binormal, r_centroid)
         frame = tangent, normal, binormal
@@ -62,19 +55,19 @@ class CoilSet:
         r = CoilSet.symmetry(self, r)
         # dl = CoilSet.stellarator_symmetry(self, dl)
         dl = CoilSet.symmetry(self, dl)
-        return I_new, dl, r
+        return I_new, dl, r, der1, der2
 
-    def compute_r_centroid(self, c):         # rc 是（nc/nfp,ns,3）
+    def compute_r_centroid(self, c):         # rc 是（nc/nfp,ns+1,3）
         rc = vmap(lambda c :bspline.splev(self.bc, c), in_axes=0, out_axes=0)(c)
         return rc
 
     def compute_der(self, c):                    
         """ Computes  1,2,3 derivatives of the rc """
         der1, wrk1 = vmap(lambda c :bspline.der1_splev(self.bc, c), in_axes=0, out_axes=0)(c)
-        der2, wrk2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1), in_axes=0, out_axes=0)(wrk1)
-        der3 = vmap(lambda wrk2 :bspline.der3_splev(self.bc, wrk2), in_axes=0, out_axes=0)(wrk2)
-        return der1, der2, der3
-
+        der2, _ = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1), in_axes=0, out_axes=0)(wrk1)
+        # der3 = vmap(lambda wrk2 :bspline.der3_splev(self.bc, wrk2), in_axes=0, out_axes=0)(wrk2)
+        return der1, der2
+        
     def compute_com(self, der1, r_centroid):    
         """ Computes T, N, and B """
         tangent = CoilSet.compute_tangent(self, der1)
@@ -105,9 +98,9 @@ class CoilSet:
         return (a[:, :, 0] * b[:, :, 0] + a[:, :, 1] * b[:, :, 1] + a[:, :, 2] * b[:, :, 2])
 
     def compute_coil_mid(self, r_centroid):      # mid_point   r0=[self.ncnfp, 3]
-        x = r_centroid[:, :, 0]
-        y = r_centroid[:, :, 1]
-        z = r_centroid[:, :, 2]
+        x = r_centroid[:, :-1, 0]
+        y = r_centroid[:, :-1, 1]
+        z = r_centroid[:, :-1, 2]
         r0 = np.zeros((self.ncnfp, 3))
         for i in range(self.ncnfp):
             r0 = r0.at[i, 0].add(np.sum(x[i]) / self.ns)
@@ -150,7 +143,7 @@ class CoilSet:
         return np.cross(tangent_deriv, normal) + np.cross(tangent, normal_deriv)
 
     def compute_alpha(self, fr):    # alpha 用fourier
-        alpha = np.zeros((self.ncnfp, self.ns ))
+        alpha = np.zeros((self.ncnfp, self.ns+1 ))
         alpha += self.theta * self.nr / 2
         Ac = fr[0]
         As = fr[1]
@@ -165,7 +158,7 @@ class CoilSet:
         return alpha
 
     def compute_alpha_1(self, fr):    
-        alpha_1 = np.zeros((self.ncnfp, self.ns ))
+        alpha_1 = np.zeros((self.ncnfp, self.ns+1 ))
         alpha_1 += self.nr / 2
         Ac = fr[0]
         As = fr[1]
@@ -224,17 +217,17 @@ class CoilSet:
         """
 
         v1, v2 = CoilSet.compute_frame(self, fr, normal, binormal)
-        r = np.zeros((self.ncnfp, self.ns, self.nnr, self.nbr, 3))
+        r = np.zeros((self.ncnfp, self.ns+1, self.nnr, self.nbr, 3))
         r += r_centroid[:, :, np.newaxis, np.newaxis, :]
         for n in range(self.nnr):
             for b in range(self.nbr):
                 r = r.at[:, :, n, b, :].add(
                     (n - 0.5 * (self.nnr - 1)) * self.ln * v1 + (b - 0.5 * (self.nbr - 1)) * self.lb * v2
                 ) 
-        return r[:, :, :, :, :]
+        return r[:, :-1, :, :, :]
 
     def compute_dl(self, params, frame, der1, der2, r_centroid):   
-        dl = np.zeros((self.ncnfp, self.ns, self.nnr, self.nbr, 3))
+        dl = np.zeros((self.ncnfp, self.ns+1, self.nnr, self.nbr, 3))
         dl += der1[:, :, np.newaxis, np.newaxis, :]
         dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, params, frame, der1, der2, r_centroid)
         for n in range(self.nnr):
@@ -243,7 +236,7 @@ class CoilSet:
                     (n - 0.5 * (self.nnr - 1)) * self.ln * dv1_dt + (b - 0.5 * (self.nbr - 1)) * self.lb * dv2_dt
                 )
 
-        return dl[:, :, :, :, :] * (1 / (self.ns))
+        return dl[:, :-1, :, :, :] * (1 / self.ns)
 
     def symmetry(self, r):
         rc_total = np.zeros((self.nc, self.ns, self.nnr, self.nbr, 3))
@@ -274,7 +267,7 @@ class CoilSet:
         return arge
 
     def read_makegrid(self, filename):      # 处理一下
-        r = np.zeros((self.nc, self.ns, 3))
+        r = np.zeros((self.nc, self.ns+1, 3))
         with open(filename) as f:
             _ = f.readline()
             _ = f.readline()
@@ -286,6 +279,7 @@ class CoilSet:
                     r = r.at[i, s, 1].set(float(x[1]))
                     r = r.at[i, s, 2].set(float(x[2]))
                 _ = f.readline()
+        r = r.at[:, -1, :].set(r[:, 0, :])
         return r
 
 

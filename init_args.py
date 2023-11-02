@@ -88,13 +88,13 @@ args = {
                                 # 输出poincare图坐标数据文件名, None不输出
 
     # 文件
-    'init_option': 'init_coil',
+    'init_option': 'init_c',
     # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
 
     'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_coil.npy',       
     # str, makegird 类型, 初始线圈文件名
 
-    'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a3.npy',
+    'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy',
     # str, 初始参数c文件名 ， c应为[nc, 3, ns] 或[nc/nfp, 3, ns] 或为ns+3
 
     'surface_r': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy',

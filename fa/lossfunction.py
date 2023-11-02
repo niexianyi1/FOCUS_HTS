@@ -4,7 +4,6 @@ from jax import jit, vmap
 from jax.config import config
 config.update("jax_enable_x64", True)
 import plot
-import coilpy
 pi = np.pi
 
 # 用class包括所有的loss function.
@@ -18,16 +17,14 @@ class LossFunction:
         self.sg = sg
         self.nc = args['nc']
         self.nfp = args['nfp']
+        self.ncnfp = args['ncnfp'] 
         self.ns = args['ns']
         self.nz = args['nz']
         self.nt = args['nt']
-        self.wb = args['wb']
-        self.wl = args['wl']
-        self.wdcc = args['wdcc']
         self.B_extern = B_extern
         self.nznfp = int(self.nz / self.nfp)
         return 
-
+    @jit
     def loss(self, coil_output_func, params):
         """ 
         Computes the default loss: int (B dot n)^2 dA + weight_length * len(coils) 
@@ -37,17 +34,20 @@ class LossFunction:
         Output: A scalar, which is the loss_val computed by the function. JAX will eventually differentiate
         this in an optimizer.
         """
-        I, dl, r_coil = coil_output_func(params)
+        I, dl, r_coil, der1, der2 = coil_output_func(params)
         self.I = I
         self.dl = dl
         self.r_coil = r_coil
-        B_loss_val = LossFunction.quadratic_flux(self)
+        Bn_mean, Bn_max = LossFunction.quadratic_flux(self)
         length = LossFunction.average_length(self)
+        k_mean, k_max = LossFunction.curvature(self, der1, der2)
+        dcc_min = LossFunction.distance_cc(self)
+        dcs_min = LossFunction.distance_cs(self)
 
-        return self.wb * B_loss_val + self.wl * length 
-
-
-    @jit
+        return (self.args['wb'] * Bn_mean + self.args['wl'] * length + 
+                self.args['wc'] * k_mean + self.args['wcm'] * k_max + 
+                self.args['wdcc'] * dcc_min + self.args['wdcs'] * dcs_min )
+    
     def quadratic_flux(self):
         """ 
 
@@ -77,13 +77,15 @@ class LossFunction:
             B_all = B + self.B_extern
         else:
             B_all = B
-        return (
-            0.5
-            * np.sum(np.sum(self.nn * B_all, axis=-1) ** 2 * self.sg)
-        )  # NZ x NTf   
+        Bn = np.sum(self.nn * B_all/
+                    np.linalg.norm(B_all, axis=-1)[:, :, np.newaxis], axis=-1) ** 2 * self.sg
+        Bn_mean = (0.5* np.sum(Bn)) 
+        # print(np.sum(np.sum(self.nn * B_all/
+        #             np.linalg.norm(B_all, axis=-1)[:, :, np.newaxis], axis=-1) * self.sg))
+        Bn_max = np.max(Bn)
+                
+        return  Bn_mean, Bn_max
 
-
-    @jit
     def biotSavart(self):
         """
 		Inputs:
@@ -97,7 +99,7 @@ class LossFunction:
 
 		A NZ x NT x 3 array which is the magnetic field vector on the surface points 
 		"""
-        mu_0 = 1
+        mu_0 = 1e-7
         mu_0I = self.I * mu_0
         mu_0Idl = (mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * self.dl)  # NC x NS x NNR x NBR x 3
         r_minus_l = (self.r_surf[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis, :]
@@ -106,34 +108,32 @@ class LossFunction:
         bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NS x NNR x NBR
         B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5))  # NZ x NT x 3
         return B
+    
+    # def normalized_error(r, I, dl, l, nn, sg, B_extern = None):
+    #     B = LossFunction.biotSavart(r, I, dl, l)  # NZ x NT x 3
+    #     if B_extern is not None:
+    #         B = B + B_extern
 
+    #     B_n = np.abs( np.sum(nn * B, axis=-1) )
+    #     B_mag = np.linalg.norm(B, axis=-1)
+    #     A = np.sum(sg)
 
+    #     return np.sum( (B_n / B_mag) * sg ) / A
 
-    @jit
-    def normalized_error(r, I, dl, l, nn, sg, B_extern = None):
-        B = LossFunction.biotSavart(r, I, dl, l)  # NZ x NT x 3
-        if B_extern is not None:
-            B = B + B_extern
+### 新增
 
-        B_n = np.abs( np.sum(nn * B, axis=-1) )
-        B_mag = np.linalg.norm(B, axis=-1)
-        A = np.sum(sg)
-
-        return np.sum( (B_n / B_mag) * sg ) / A
-
-
-    def torsion(der1, der2, der3):       # new
-        cross12 = np.cross(der1, der2)
-        top = (
-            cross12[:, :, 0] * der3[:, :, 0]
-            + cross12[:, :, 1] * der3[:, :, 1]
-            + cross12[:, :, 2] * der3[:, :, 2]
-        )
-        bottom = np.linalg.norm(cross12, axis=-1) ** 2
-        return top / bottom  # NC x NS
-
-    def mean_torsion(torsion):    #new
-        return np.mean(torsion, axis=-1)
+    # def torsion(der1, der2, der3):       # new
+    #     cross12 = np.cross(der1, der2)
+    #     top = (
+    #         cross12[:, :, 0] * der3[:, :, 0]
+    #         + cross12[:, :, 1] * der3[:, :, 1]
+    #         + cross12[:, :, 2] * der3[:, :, 2]
+    #     )
+    #     bottom = np.linalg.norm(cross12, axis=-1) ** 2
+    #     t = abs(top / bottom)     # NC x NS
+    #     t_mean = np.mean(t)
+    #     t_max = np.max(t)
+    #     return t_mean, t_max
 
     def average_length(self):      #new
         al = np.zeros_like(self.r_coil)
@@ -141,13 +141,28 @@ class LossFunction:
         al = al.at[:, -1, :].set(self.r_coil[:, 0, :] - self.r_coil[:, -1, :])
         return np.sum(np.linalg.norm(al, axis=-1)) / (self.nc)
 
+    def distance_cc(self):  ### 暂未考虑finite-build
+        rc = self.r_coil[:, :, 0, 0, :]
+        dr = rc[:self.ncnfp, :, :] - rc[1:self.ncnfp+1, :, :]
+        dr = np.linalg.norm(dr, axis = -1)
+        dcc_min = np.min(dr)
+        return dcc_min
 
-    @jit
-    def average_length_cc(l):
-        rc = l[:, :, 0, 0, :]
-        
+    def distance_cs(self):  ### 暂未考虑finite-build
+        rc = self.r_coil[:, :, 0, 0, :]
+        rs = self.r_surf
+        dr = rc[:self.ncnfp, :, np.newaxis, np.newaxis, :] - rs[np.newaxis, np.newaxis, :, :, :]
+        dr = np.linalg.norm(dr, axis = -1)
+        dcs_min = np.min(dr)
+        return dcs_min
 
-        pass
+    def curvature(self, der1, der2):
+        bottom = np.linalg.norm(der1, axis = -1)**3
+        top = np.linalg.norm(np.cross(der1, der2), axis = -1)
+        k = top / bottom
+        k_mean = np.mean(k)
+        k_max = np.max(k)
+        return k_mean, k_max
 
     def symmetry(self, B):
         B_total = np.zeros((self.nz, self.nt, 3))
