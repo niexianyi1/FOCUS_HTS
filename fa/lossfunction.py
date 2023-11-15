@@ -40,14 +40,14 @@ class LossFunction:
         self.r_coil = r_coil
         Bn_mean, Bn_max = LossFunction.quadratic_flux(self)
         length = LossFunction.average_length(self)
-        k_mean, k_max = LossFunction.curvature(self, der1, der2)
-        dcc_min = LossFunction.distance_cc(self)
-        dcs_min = LossFunction.distance_cs(self)
-
-        return (self.args['wb'] * Bn_mean + self.args['wl'] * length + 
-                self.args['wc'] * k_mean + self.args['wcm'] * k_max + 
-                self.args['wdcc'] * dcc_min + self.args['wdcs'] * dcs_min )
+        # k_mean, k_max = LossFunction.curvature(self, der1, der2)
+        # dcc_min = LossFunction.distance_cc(self)
+        # dcs_min = LossFunction.distance_cs(self)
+        return (self.args['wb'] * Bn_mean + self.args['wl'] * length) 
+                # + self.args['wc'] * k_mean + self.args['wcm'] * k_max 
+                # + self.args['wdcc'] * dcc_min + self.args['wdcs'] * dcs_min 
     
+         
     def quadratic_flux(self):
         """ 
 

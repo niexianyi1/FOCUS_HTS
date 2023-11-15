@@ -20,6 +20,7 @@ if __name__ == "__main__":
     with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
+    
     args['ncnfp'] = ncnfp = int(args['nc']/args['nfp'])
 
     if args['init_option'] == 'init_coil':
@@ -51,7 +52,7 @@ if __name__ == "__main__":
         # if args.axis.lower() == "w7x":
         assert args['nz'] == 150
         assert args['nt'] == 20
-        assert args['nc'] == 50
+        # assert args['nc'] == 50
         # need to assert that axis has right number of points
         r = np.load(args['surface_r'])
         nn = np.load(args['surface_nn'])
@@ -62,7 +63,7 @@ if __name__ == "__main__":
 
     @jit
     def update(i, opt_state_c, opt_state_fr, lossfunc):
-        c = get_params_c(opt_state_c)    
+        c = get_params_c(opt_state_c)   
         c = c.at[:, :, -3:].set(c[:, :, :3])
         opt_state_c[0][0][0] = c
         fr = get_params_fr(opt_state_fr)
@@ -93,11 +94,12 @@ if __name__ == "__main__":
 
     gradient, loss_val = update(0, opt_state_c, opt_state_fr, lossfunc)
     g_c, g_fr = gradient
-    np.save('/home/nxy/codes/focusadd-spline/glc.npy', g_c)
+    print( loss_val)
+
     for i in range(args['n']-1):
         print('i = ', i+1)
         g_c, g_fr = gradient
-        print( g_fr)
+        print('g_c = ', g_c[0])
         opt_state_c = opt_update_c(i, g_c, opt_state_c)
         opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
         gradient, loss_val = update(i, opt_state_c, opt_state_fr, lossfunc)

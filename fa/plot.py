@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import scipy.interpolate as si 
 import coilpy
 import bspline 
-import bzbt
 
 
 class plot:
@@ -100,7 +99,7 @@ class plot:
         assert lenr == lenz
         bc = bspline.get_bc_init(c.shape[2])
         rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
-        rc = plot.symmetry(self, rc[:, :-3, :])  
+        rc = plot.symmetry(self, rc)  
         x = rc[:, :, 0]   
         y = rc[:, :, 1]
         z = rc[:, :, 2]
@@ -121,9 +120,9 @@ class plot:
 
         return
 
-    def plot_bzbt(self):
-        bzbt.bzbt(self.args)
-        return
+    # def plot_bzbt(self):
+    #     bzbt.bzbt(self.args)
+    #     return
 
     @jit
     def symmetry(self, r):

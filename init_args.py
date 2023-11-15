@@ -1,11 +1,11 @@
 import json
-
+# import numpy as np
 
 args = {
     # 优化器参数
-    'n': 1,            # int, "--number_iter"
+    'n': 10,            # int, "--number_iter"
                         # 优化器迭代次数
-    'lr': 5e-5,       # float, "--learning_rate_c"
+    'lr': 2.5e-5,       # float, "--learning_rate_c"
                         # 参数c 迭代步长
     'lrfr': 1.0,        # float, "--learning_rate_fr"
                         # 参数fr 迭代步长
@@ -33,7 +33,7 @@ args = {
     'nbr': 1,       # int, "--number_binormal_rotate"
                     # 有限截面下的副法向线圈数量
     
-    'rc': 2.0,      # float,"--radius_coil"
+    'rc': 1.0,      # float,"--radius_coil"
                     # 线圈半径
     'nr': 0,        # int,  "--number_rotate"
                     # 有限截面下每个线圈的旋转数
@@ -88,10 +88,10 @@ args = {
                                 # 输出poincare图坐标数据文件名, None不输出
 
     # 文件
-    'init_option': 'init_c',
+    'init_option': 'init_coil',
     # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
 
-    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_coil.npy',       
+    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy',       
     # str, makegird 类型, 初始线圈文件名
 
     'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy',
@@ -111,13 +111,13 @@ args = {
     'out_coil_makegrid': '/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_1000',
     # str, makegrid 类型, 输出线圈文件名 
                  
-    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_a1.npy',         
+    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_a2.npy',         
     # str, 输出损失函数值（lossvals）文件名
 
-    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a1.npy',
+    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a2.npy',
     # str, 输出参数c文件名
 
-    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_a1.npy'
+    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_a2.npy'
     # str, 输出参数fr文件名
 
 }

@@ -1,29 +1,91 @@
+### 单圆形线圈在轴上产生磁场对比
+
+
+import json
+import plotly.graph_objects as go
+import bspline 
 import jax.numpy as np
-from jax import jit, vmap
-import tables as tb
-import numpy
-import h5py
-from jax.config import config
-import bspline
-config.update("jax_enable_x64", True)
+import coilpy
 pi = np.pi
+from jax import vmap
+from jax.config import config
+import scipy.interpolate as si 
+config.update("jax_enable_x64", True)
 
 
+with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
+    args = json.load(f)
+globals().update(args)
+
+
+def biotSavart(I, dl, r_surf, r_coil):
+    # 先只算一个线圈输入 r_coil = r_coil[0]
+
+    mu_0 = 1
+    mu_0I = I * mu_0
+    mu_0Idl = mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * dl
+    r_minus_l = (r_surf[np.newaxis, :, np.newaxis, np.newaxis, np.newaxis, :] - r_coil[:, np.newaxis, :, :, :, :]) 
+    print(r_minus_l.shape) 
+    top = np.cross(mu_0Idl[:, np.newaxis, :, :, :, :], r_minus_l)  # NC x NZ x NT x NS x NNR x NBR x 3
+    bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NS x NNR x NBR
+    B = np.sum(top / bottom[:, :, :, :, :, np.newaxis], axis=( 0, 2, 3, 4))  # NZ x NT x 3
+
+    return B
+
+## 单磁面点输入，
+def BS(I, dl, r_surf, r_coil):
+
+    mu_0 = 1
+    mu_0I = I * mu_0
+    mu_0Idl = np.zeros_like(dl)
+    for i in range(len(dl)):
+        mu_0Idl = mu_0Idl.at[i].set(dl[i] * mu_0I[i] )
+    dl = mu_0Idl
+
+    ## r_surf: (3) , r_coil: (nc,ns,nnr,nbr, 3), dl: (nc,ns,nnr,nbr, 3)
+    dx = r_surf[0] - r_coil[:,:,:,:,0]
+    dy = r_surf[1] - r_coil[:,:,:,:,1]
+    dz = r_surf[2] - r_coil[:,:,:,:,2]
+    dr = dx * dx + dy * dy + dz * dz
+    Bx = (dz * dl[:,:,:,:,1] - dy * dl[:,:,:,:,2]) * np.power(dr, -1.5)
+    By = (dx * dl[:,:,:,:,2] - dz * dl[:,:,:,:,0]) * np.power(dr, -1.5) 
+    Bz = (dy * dl[:,:,:,:,0] - dx * dl[:,:,:,:,1]) * np.power(dr, -1.5) 
+    B = np.array([np.sum(Bx), np.sum(By), np.sum(Bz)]) 
+
+    return B
+
+## 单线圈输入，
+def fd(I, r_surf, x,y,z):
+    xt = x[1:] - x[:-1]
+    yt = y[1:] - y[:-1]
+    zt = z[1:] - z[:-1]
+    dx = r_surf[0] - (x[:-1] + x[1:]) / 2
+    dy = r_surf[1] - (y[:-1] + y[1:]) / 2
+    dz = r_surf[2] - (z[:-1] + z[1:]) / 2
+    dr = dx * dx + dy * dy + dz * dz
+    Bx = (dz * yt - dy * zt) * np.power(dr, -1.5)
+    By = (dx * zt - dz * xt) * np.power(dr, -1.5)
+    Bz = (dy * xt - dx * yt) * np.power(dr, -1.5)
+    B = np.array([np.sum(Bx), np.sum(By), np.sum(Bz)]) *pi/32
+    return B
+
+def hh(r_coil, r_surf):
+    Rvec = r_surf[:, np.newaxis, :] - r_coil[np.newaxis, :, :]
+    assert (Rvec.shape)[-1] == 3
+    RR = np.linalg.norm(Rvec, axis=2)
+    Riv = Rvec[:, :-1, :]
+    Rfv = Rvec[:, 1:, :]
+    Ri = RR[:, :-1]
+    Rf = RR[:, 1:]
+    B = (np.sum(np.cross(Riv, Rfv) * ((Ri + Rf) / ((Ri * Rf) * (Ri * Rf + np.sum(Riv * Rfv, axis=2))))[:, :, np.newaxis],axis=1,))
+    return B
 
 
 class CoilSet:
-
-    """
-	CoilSet is a class which represents all of the coils surrounding a plasma surface. The coils
-	are represented by a bspline and a fourier series, one for the coil winding pack centroid and
-    one for the rotation of the coils. 
-	"""
-
     def __init__(self, args):
-        self.args = args
+        
         self.nc = args['nc']
         self.nfp = args['nfp']
-        self.ncnfp = args['ncnfp']
         self.ns = args['ns']
         self.ln = args['ln']
         self.lb = args['lb']
@@ -36,37 +98,38 @@ class CoilSet:
         self.out_hdf5 = args['out_hdf5']
         self.out_coil_makegrid = args['out_coil_makegrid']
         self.theta = np.linspace(0, 2*pi, self.ns+1)
+        self.ncnfp = int(self.nc/self.nfp)
         self.I = args['I']
         return
- 
+    
 
-    @jit
-    def coilset(self, params):             # 根据lossfunction的需求再添加新的输出项                   
-        c, fr = params   
+    def coilset(self, params):                           
+
+        c, fr = params                                                                   
         I_new = self.I / (self.nnr * self.nbr)
-        # COMPUTE COIL VARIABLES
-        r_centroid = CoilSet.compute_r_centroid(self, c)  # [nc, ns+1, 3]
-        der1, der2 = CoilSet.compute_der(self, c)   # [nc, ns+1, 3]
+        r_centroid = CoilSet.compute_r_centroid(self, c)  #r_centroid :[nc, ns+1, 3]
+        der1, der2, der3 = CoilSet.compute_der(self, c)
         tangent, normal, binormal = CoilSet.compute_com(self, der1, r_centroid)
         r = CoilSet.compute_r(self, fr, normal, binormal, r_centroid)
         frame = tangent, normal, binormal
         dl = CoilSet.compute_dl(self, params, frame, der1, der2, r_centroid)
         # r = CoilSet.stellarator_symmetry(self, r)
-        r = CoilSet.symmetry(self, r)
+        # r = CoilSet.symmetry(self, r)
         # dl = CoilSet.stellarator_symmetry(self, dl)
-        dl = CoilSet.symmetry(self, dl)
-        return I_new, dl, r, der1, der2
+        # dl = CoilSet.symmetry(self, dl)
+        return I_new, dl, r
 
-    def compute_r_centroid(self, c):         # rc 是（nc/nfp,ns+1,3）
+    def compute_r_centroid(self, c):         # rc计算的是（nc,ns+1,3）
         rc = vmap(lambda c :bspline.splev(self.bc, c), in_axes=0, out_axes=0)(c)
         return rc
 
     def compute_der(self, c):                    
         """ Computes  1,2,3 derivatives of the rc """
         der1, wrk1 = vmap(lambda c :bspline.der1_splev(self.bc, c), in_axes=0, out_axes=0)(c)
-        der2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1), in_axes=0, out_axes=0)(wrk1)
-        return der1, der2
-        
+        der2, wrk2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1), in_axes=0, out_axes=0)(wrk1)
+        der3 = vmap(lambda wrk2 :bspline.der3_splev(self.bc, wrk2), in_axes=0, out_axes=0)(wrk2)
+        return der1, der2, der3
+
     def compute_com(self, der1, r_centroid):    
         """ Computes T, N, and B """
         tangent = CoilSet.compute_tangent(self, der1)
@@ -96,7 +159,7 @@ class CoilSet:
     def dot_product_rank3_tensor(a, b):         # dot
         return (a[:, :, 0] * b[:, :, 0] + a[:, :, 1] * b[:, :, 1] + a[:, :, 2] * b[:, :, 2])
 
-    def compute_coil_mid(self, r_centroid):      # mid_point   r0=[self.ncnfp, 3]
+    def compute_coil_mid(self, r_centroid):      # mid_point
         x = r_centroid[:, :-1, 0]
         y = r_centroid[:, :-1, 1]
         z = r_centroid[:, :-1, 2]
@@ -142,7 +205,7 @@ class CoilSet:
         return np.cross(tangent_deriv, normal) + np.cross(tangent, normal_deriv)
 
     def compute_alpha(self, fr):    # alpha 用fourier
-        alpha = np.zeros((self.ncnfp, self.ns+1 ))
+        alpha = np.zeros((self.ncnfp, self.ns + 1))
         alpha += self.theta * self.nr / 2
         Ac = fr[0]
         As = fr[1]
@@ -157,7 +220,7 @@ class CoilSet:
         return alpha
 
     def compute_alpha_1(self, fr):    
-        alpha_1 = np.zeros((self.ncnfp, self.ns+1 ))
+        alpha_1 = np.zeros((self.ncnfp, self.ns + 1))
         alpha_1 += self.nr / 2
         Ac = fr[0]
         As = fr[1]
@@ -173,9 +236,9 @@ class CoilSet:
 
     def compute_frame(self, fr, N, B):  
         """
-		Computes the vectors v1 and v2 for each coil. v1 and v2 are rotated relative to
-		the normal and binormal frame by an amount alpha. Alpha is parametrized by a Fourier series.
-		"""
+        Computes the vectors v1 and v2 for each coil. v1 and v2 are rotated relative to
+        the normal and binormal frame by an amount alpha. Alpha is parametrized by a Fourier series.
+        """
         alpha = CoilSet.compute_alpha(self, fr)
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
@@ -216,7 +279,7 @@ class CoilSet:
         """
 
         v1, v2 = CoilSet.compute_frame(self, fr, normal, binormal)
-        r = np.zeros((self.ncnfp, self.ns+1, self.nnr, self.nbr, 3))
+        r = np.zeros((self.ncnfp, self.ns +1, self.nnr, self.nbr, 3))
         r += r_centroid[:, :, np.newaxis, np.newaxis, :]
         for n in range(self.nnr):
             for b in range(self.nbr):
@@ -226,7 +289,7 @@ class CoilSet:
         return r[:, :-1, :, :, :]
 
     def compute_dl(self, params, frame, der1, der2, r_centroid):   
-        dl = np.zeros((self.ncnfp, self.ns+1, self.nnr, self.nbr, 3))
+        dl = np.zeros((self.ncnfp, self.ns + 1, self.nnr, self.nbr, 3))
         dl += der1[:, :, np.newaxis, np.newaxis, :]
         dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, params, frame, der1, der2, r_centroid)
         for n in range(self.nnr):
@@ -235,7 +298,7 @@ class CoilSet:
                     (n - 0.5 * (self.nnr - 1)) * self.ln * dv1_dt + (b - 0.5 * (self.nbr - 1)) * self.lb * dv2_dt
                 )
 
-        return dl[:, :-1, :, :, :] * (1 / self.ns)
+        return dl[:, :-1, :, :, :] * (1 / (self.ns+2))
 
     def symmetry(self, r):
         rc_total = np.zeros((self.nc, self.ns, self.nnr, self.nbr, 3))
@@ -247,107 +310,97 @@ class CoilSet:
         
         return rc_total
 
-    # def stellarator_symmetry(self, r):
-    #     rc = np.zeros((self.ncnfp*2, self.ns, self.nnr, self.nbr, 3))
-    #     rc = rc.at[0:self.ncnfp, :, :, :, :].add(r)
-       
-    #     theta = 2 * pi / self.nfp
-    #     T = np.array([[np.cos(theta), np.sin(theta), 0], [np.sin(theta), -np.cos(theta), 0], [0, 0, -1]])
-    #     rc = rc.at[self.ncnfp:self.ncnfp*2, :, :, :, :].add(np.dot(r, T))
+def symmetry(args, r):
+    ncnfp = int(args['nc'] / args['nfp'])
+    rc_total = np.zeros((args['nc'], args['ns'], 3))
+    rc_total = rc_total.at[0:ncnfp, :, :].add(r)
+    for i in range(args['nfp'] - 1):        
+        theta = 2 * np.pi * (i + 1) / args['nfp']
+        T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+        rc_total = rc_total.at[ncnfp*(i+1):ncnfp*(i+2), :, :].add(np.dot(r, T))
     
-    #     return rc
+    return rc_total
 
-    def read_hdf5(self, filename):
-        f = h5py.File(filename, "r")
-        arge = {}
-        for key in list(f.keys()):
-            arge.update({key: f[key][:]})
-        f.close()
-        return arge
+args['nfp'] = 1
+args['nc'] = 1
+I = np.ones(1)
+args['I'] = I
+r_surf = np.load(args['surface_r'])[0,:,:]
 
-    def read_makegrid(self, filename):      # 处理一下
-        r = np.zeros((self.nc, self.ns+1, 3))
-        with open(filename) as f:
-            _ = f.readline()
-            _ = f.readline()
-            _ = f.readline()
-            for i in range(self.nc):
-                for s in range(self.ns):
-                    x = f.readline().split()
-                    r = r.at[i, s, 0].set(float(x[0]))
-                    r = r.at[i, s, 1].set(float(x[1]))
-                    r = r.at[i, s, 2].set(float(x[2]))
-                _ = f.readline()
-        r = r.at[:, -1, :].set(r[:, 0, :])
-        return r
+##### 轴上磁场解析式
+# x = [0 for i in range(20)]
+# y = [0 for i in range(20)]
+# z = [i for i in range(20)]
+# r_surf = np.array([x,y,z]).T
+# B0 = np.zeros((20,3))
+# for i in range(20):
+#     B0 = B0.at[i,2].set(1/2/(1+z[i])**1.5*np.sqrt(1+z[i]**2))
 
+c = np.load('/home/nxy/codes/focusadd-spline/results/circle/c_100b.npy')
+fr = np.zeros((2, 10, args['nfr'])) 
+params = c, fr
+bc = bspline.get_bc_init(args['ns']+3)
+args['bc'] = bc
 
-    def write_hdf5(self, params):     # 根据需求写入数据
-        """ Write coils in HDF5 output format.
-		Input:
+theta = np.linspace(0,2*pi,ns+1)
+x = np.cos(theta)
+y = np.sin(theta)
+z = np.zeros(ns+1)
+coil = np.array([x,y,z]).T
+coil = coil.reshape((1, ns+1, 3)) 
 
-		output_file (string): Path to outputfile, string should include .hdf5 format
-
-
-		"""
-
-        c, fr = params
-        with tb.open_file(self.out_hdf5, "w") as f:
-            coildata = numpy.dtype(
-                [
-                    ("nc", int),
-                    ("ns", int),
-                    ("ln", float),
-                    ("lb", float),
-                    ("nnr", int),
-                    ("nbr", int),
-                    ("rc", float),
-                    ("nr", int),
-                    ("nfr", int),
-                ]
-            )
-            arr = numpy.array(
-                [(self.nc, self.ns, self.ln, self.lb, self.nnr, self.nbr, self.rc, self.nr, self.nfr)], dtype=coildata,
-            )
-            f.create_table("/", "coildata", coildata)
-            f.root.coildata.append(arr)
-            f.create_array("/", "coilspline", numpy.asarray(c))
-            f.create_array("/", "coilrotation", numpy.asarray(fr))
-        return
-
-    def write_makegrid(self, params):    # 或者直接输入r, I
-        I, _, r = CoilSet.coilset(self, params)
-        with open(self.out_coil_makegrid, "w") as f:
-            f.write("periods {}\n".format(0))
-            f.write("begin filament\n")
-            f.write("FOCUSADD Coils\n")
-            for i in range(self.ncnfp):
-                for n in range(self.nnr):
-                    for b in range(self.nbr):
-                        for s in range(self.ns):
-                            f.write(
-                                "{} {} {} {}\n".format(
-                                    r[i, s, n, b, 0],
-                                    r[i, s, n, b, 1],
-                                    r[i, s, n, b, 2],
-                                    I[i],
-                                )
-                            )
-                        f.write(
-                            "{} {} {} {} {} {}\n".format(
-                                r[i, 0, n, b, 0],
-                                r[i, 0, n, b, 1],
-                                r[i, 0, n, b, 2],
-                                0.0,
-                                "{},{},{}".format(i, n, b),
-                                "coil/filament1/filament2",
-                            )
-                        )
-        return
+fr = np.zeros((2, 1, args['nfr']))        
+c, bc  = bspline.tcku(coil[:,:-1,:], 1, ns, 3)    
+args['bc'] = bc
+params = c, fr
 
 
 
+coil = CoilSet(args)
+I, dl, r_coil = coil.coilset(params)
+Bss = biotSavart(I, dl, r_surf, r_coil)
+Bbs = vmap(lambda r_surf :BS(I, dl, r_surf, r_coil), in_axes=0, out_axes=0)(r_surf)
 
+## coilpy ##
+r_coil = np.squeeze(r_coil)[np.newaxis,:,:]
+dl = np.squeeze(dl)[np.newaxis,:,:]
+x = y = z = np.zeros((1,65))
+x = x.at[:,:-1].set(r_coil[:,:, 0])
+x = x.at[:,-1].set(x[:,0])
+y = y.at[:,:-1].set(r_coil[:,:, 1])
+y = y.at[:,-1].set(y[:,0])
+z = z.at[:,:-1].set(r_coil[:,:, 2])
+z = z.at[:,-1].set(z[:,0])
+
+Bfd = np.zeros((20,3))
+for i in range(20):
+    b = 0
+    for j in range(10):
+        b += fd(I, r_surf[i,:], x[j,:], y[j,:], z[j,:])
+    Bfd = Bfd.at[i,:].set(b)
+
+r_coil = [x,y,z]
+r_coil = np.array(r_coil).transpose([1,2,0])
+r_coil = np.reshape(r_coil, (1*65, 3))
+Bhh = hh(r_coil, r_surf)
+
+
+# print('B0 = ', B0)
+print('Bss = ', Bss)
+print('Bfd = ', Bfd)
+print('Bbs = ', Bbs)
+print('Bhh = ', Bhh)
+
+# print('Bss - B0/B0 = ', (Bss[2:,:] - B0[:-2, :])/B0[:-2, :])
+# print('Bfd - B0/B0 = ', (Bfd[2:,:] - B0[:-2, :])/B0[:-2, :])
+# print('Bbs - B0/B0 = ', (Bbs[2:,:] - B0[:-2, :])/B0[:-2, :])
+# print('Bhh - B0/B0 = ', (Bhh[2:,:] - B0[:-2, :])/B0[:-2, :])
+
+print('Bss - Bfd/Bfd = ', (Bss - Bfd)/Bfd)
+print('Bss - Bbs/Bbs = ', (Bss - Bbs)/Bbs)
+print('Bss - Bhh/Bhh = ', (Bss - Bhh)/Bhh)
+
+print('Bfd - Bhh/Bhh = ', (Bfd - Bhh)/Bhh)
 
 
 

@@ -3,11 +3,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 from jax import vmap
 import scipy.interpolate as si 
-import bzbt 
 import json
 import lossfunction
 import bspline
 import sys
+import coilpy
 
 
 with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
@@ -21,7 +21,7 @@ def spline(ai):    # 线圈
     # ----- rc -----
     c = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy")  # 实际ns为64   
     N, NC, k = 65, 10, 3   # 参数     
-    t = np.linspace(-3/(N-3), N/(N-3), N+4)
+    t = np.linspace(-3/(N-1), (N+2)/(N-1), N+6) 
     N = 640
     u = np.linspace(0, 1, N)
     rc = np.zeros((10, 3, N))
@@ -51,8 +51,8 @@ def spline(ai):    # 线圈
     rc = rc[2*640:3*640, :]
     rc_new = rc_new[2*640:3*640, :]
     fig = go.Figure()   
-    fig.add_scatter3d(x=rc[:, 0],y=rc[:, 1],z=rc[:, 2], name='rc'+"{}".format(i), mode='markers', marker_size = 5)
-    fig.add_scatter3d(x=rc_new[:, 0],y=rc_new[:, 1],z=rc_new[:, 2], name='rc_new'+"{}".format(i), mode='markers', marker_size = 5)
+    fig.add_scatter3d(x=rc[:, 0],y=rc[:, 1],z=rc[:, 2], name='rc', mode='markers', marker_size = 5)
+    fig.add_scatter3d(x=rc_new[:, 0],y=rc_new[:, 1],z=rc_new[:, 2], name='rc_new', mode='markers', marker_size = 5)
     fig.update_layout(scene_aspectmode='data')
     fig.show()  
 
@@ -97,11 +97,9 @@ def loss(ai):
     nn = np.load(args['surface_nn'])
     sg = np.load(args['surface_sg'])
     der1, wrk1 = vmap(lambda c :bspline.der1_splev(bc, c), in_axes=0, out_axes=0)(c)
-    der2, wrk2 = vmap(lambda wrk1 :bspline.der2_splev(bc, wrk1), in_axes=0, out_axes=0)(wrk1)
-    der3 = vmap(lambda wrk2 :bspline.der3_splev(bc, wrk2), in_axes=0, out_axes=0)(wrk2)
+    der2 = vmap(lambda wrk1 :bspline.der2_splev(bc, wrk1), in_axes=0, out_axes=0)(wrk1)
     der1 = der1[:, :-1, :]
     der2 = der2[:, :-1, :]
-    der3 = der3[:, :-1, :]
     dl = der1[:, :, np.newaxis, np.newaxis, :]/ns
 
     def quadratic_flux(I, dl, r_surf, r_coil, nn, sg):
@@ -182,31 +180,50 @@ def lossvals(ai):
     fig.show()
     return
 
+def poincare():
+    def symmetry(r):
+        rc_total = np.zeros((50, 64, 3))
+        rc_total = rc_total.at[0:10, :, :].add(r)
+        for i in range(5 - 1):        
+            theta = 2 * np.pi * (i + 1) / 5
+            T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+            rc_total = rc_total.at[10*(i+1):10*(i+2), :, :].add(np.dot(r, T))
+        return rc_total
+    rc = np.load("/home/nxy/codes/focusadd-spline/results/circle/rc_10.npy")  
+    r0 = [6]
+    z0 = [0.2]
+    lenr = len(r0)
+    lenz = len(z0)
+    assert lenr == lenz
+    # bc = bspline.get_bc_init(c.shape[2])
+    # rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
+    # rc = symmetry(rc[:, :, :])  
+    rc = np.reshape(rc, (50, 65, 3))
+    x = rc[:, :, 0]   
+    y = rc[:, :, 1]
+    z = rc[:, :, 2]
+    nfp = 1
+    I = np.ones((nc))
+    name = np.zeros(nc)
+    group = np.zeros(nc)
+
+    coil = coilpy.coils.Coil(x, y, z, I, name, group)
+    line = coilpy.misc.tracing(coil.bfield, r0, z0, phi0, niter, nfp, nstep)
+
+    line = np.reshape(line, (lenr*(niter+1), 2))
+    fig = go.Figure()
+    fig.add_scatter(x = line[:, 0], y = line[:, 1],  name='poincare', mode='markers', marker_size = 1.5)
+    fig.update_layout(scene_aspectmode='data')
+    fig.show()
+
+    return
 
 
 
 
-# lossv = np.zeros((6, 6))
-# j = 0
-# for i in [0,3,5,6,8,9]:
-#     ai = 'c{}'.format(i)
-#     lossv = lossv.at[j].set(loss(ai))
-#     j = j+1
-# print(lossv)
 ai = 'a1'
 lossvals(ai)
 spline(ai)
 loss(ai)
-
-
-# name = ['Bn', 'length', 'k_mean', 'dcc', 'dcs', 'k_max']
-# fig = go.Figure()
-# for i in range(6):
-#     fig.add_scatter(x=np.array([3, 4.2, 5, 5.4, 6.2, 6.6]), y=lossv[:, i], name=name[i], line=dict(width=2))
-# fig.update_xaxes(title_text = "wc",title_font = {"size": 30},title_standoff = 15, tickfont=dict(size=30))
-# fig.update_yaxes(title_text = "lossvalue",title_font = {"size": 30},title_standoff = 15, tickfont=dict(size=30))
-#                 # ,type="log", exponentformat = 'e'
-# fig.show()
-
-
+# poincare()
 
