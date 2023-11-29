@@ -38,14 +38,14 @@ class plot:
         t, u, k = bc
         # ----- rc_bspline -----
         u = np.linspace(0, 1, self.nps)
-        rc_bspline = np.zeros((self.nc, 3, self.nps))
-        tck = [[0]*3 for i in range (self.nc)]
-        for i in range(self.nc):
+        rc_bspline = np.zeros((self.ncnfp, 3, self.nps))
+        tck = [[0]*3 for i in range (self.ncnfp)]
+        for i in range(self.ncnfp):
             tck[i] = [t, c[i], k]
             rc_bspline = rc_bspline.at[i, :, :].set(si.splev(u, tck[i]))  
 
         rc_bspline = np.transpose(rc_bspline, (0, 2, 1))
-        rc_bspline = np.reshape(rc_bspline, (self.nps*self.nc, 3))
+        rc_bspline = np.reshape(rc_bspline, (self.nps*self.ncnfp, 3))
         
         # np.save('/home/nxy/codes/FOCUSADD_B/results/bnormal/w7x_highres_rc_1000.npy', rc_bspline)   # 保存数据
         
@@ -72,7 +72,7 @@ class plot:
             fig.show()
         else:
             fig = go.Figure()
-            fig.add_scatter3d(x=rc_bspline[:self.nc*self.nps, 0],y=rc_bspline[:self.nc*self.nps, 1],z=rc_bspline[:self.nc*self.nps, 2], name='rc_bspline', mode='markers', marker_size = 1)   
+            fig.add_scatter3d(x=rc_bspline[:, 0],y=rc_bspline[:, 1],z=rc_bspline[:, 2], name='rc_bspline', mode='markers', marker_size = 1)   
             fig.update_layout(scene_aspectmode='data')
             fig.show()
 

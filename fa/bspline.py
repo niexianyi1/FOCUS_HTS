@@ -1,16 +1,16 @@
 import jax.numpy as np
 import numpy 
-from jax import vmap, config
+from jax import config
 import scipy.interpolate as si
-import jax.scipy.linalg as sl
+# import jax.scipy.linalg as sl
 import plotly.graph_objects as go
 config.update("jax_enable_x64", True)
 #### 三阶导数不可用
 
 ## 在这里需要一个重合点，输入时自带
-def get_c_init(init_coil, nc, ns):       
-    coil = np.load("{}".format(init_coil))[:, :ns+1, :]
-    c, bc  = prep(coil, nc, ns+1, 3)
+def get_c_init(init_coil, nc):       
+    coil = np.load("{}".format(init_coil))
+    c, bc  = prep(coil, nc, coil.shape[1], 3)
     return c, bc
 
 ## 如果已有参数c,可直接获得bc，ns为参数c的长度
@@ -55,27 +55,28 @@ def get_bc_init(ns):
 #     return c, bc
 
 
-def prep(rc, nc, ns, k):
+def prep(rc, nc, ns, k):  # 此处ns为rc.shape[1]
     x = numpy.array(np.transpose(rc, (0, 2, 1)))
     u = np.linspace(0, 1, ns)
     t = np.linspace(-3/(ns-1), (ns+2)/(ns-1), ns+6) 
     c = np.zeros((nc, 3, ns+2))   
-    for i in range(10):
+    for i in range(nc):
         tck, u = si.splprep(x[i], u=u, k=3, t=t, s=0, per=1)
         c = c.at[i,:,:].set(tck[1])
     bc = [t, u, k]
     return c, bc
 
-def splev(bc, c):            # 矩阵形式计算,与tcku配合 
+
+def splev(bc, c):           
     t, u, k = bc   
-    m = len(u)    # m = 65 = ns
+    m = len(u)    # m = 65 = ns+1
     c = np.array(c)
     xyz = np.zeros((m,3))
     mat = np.array([[1/6, 2/3, 1/6, 0], [-1/2, 0, 1/2, 0], [1/2, -1, 1/2, 0], [-1/6, 1/2, -1/2, 1/6]])  
     for i in range(m-1):
         x1 = (u[i] - t[i+3])*(m-1)
         X1 = np.array([1, x1, x1*x1, x1*x1*x1])
-        B1 = np.dot(X1, mat) 
+        B1 = np.dot(X1, mat)  
         xyz = xyz.at[i,:].set(np.dot(B1, c[:,i:i+4].T))
     xyz = xyz.at[m-1,:].set(np.dot(np.array([0, 1/6, 2/3, 1/6]), c[:,m-2:m+2].T))
     return xyz
@@ -191,6 +192,6 @@ def der2_splev(bc, wrk1):       # 一阶导数
 #         der2 = der2.at[i,:].set(np.dot(B2, wrk2[:,i-2:i].T))
 #     der2 = der2.at[m-1,:].set(np.dot(np.array([0, 1]), wrk2[:,m-4:m-2].T))
 
-#     return der2, wrk2
+#     return der2
 
 

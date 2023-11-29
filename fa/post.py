@@ -19,8 +19,8 @@ globals().update(args)
 def spline(ai):    # 线圈
 
     # ----- rc -----
-    c = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy")  # 实际ns为64   
-    N, NC, k = 65, 10, 3   # 参数     
+    c = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_w7x_5.npy")  # 实际ns为64   
+    N, NC, k = 65, 5, 3   # 参数     
     t = np.linspace(-3/(N-1), (N+2)/(N-1), N+6) 
     N = 640
     u = np.linspace(0, 1, N)
@@ -33,13 +33,13 @@ def spline(ai):    # 线圈
     rc = np.reshape(rc, (N*10, 3))
     # ----- rc_new -----  
     c_new = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_{}.npy".format(ai))  
-    rc_new = np.zeros((10, 3, N))
-    tck = [[0]*3 for i in range (10)]
-    for i in range(10):
+    rc_new = np.zeros((5, 3, N))
+    tck = [[0]*3 for i in range (5)]
+    for i in range(5):
         tck[i] = [t, c_new[i], k]
         rc_new = rc_new.at[i, :, :].set(si.splev(u, tck[i]))  
     rc_new = np.transpose(rc_new, (0, 2, 1))
-    rc_new = np.reshape(rc_new, (N*10, 3))
+    rc_new = np.reshape(rc_new, (N*5, 3))
 
     # # ----- 整体 -----
     fig = go.Figure()
@@ -56,7 +56,7 @@ def spline(ai):    # 线圈
     fig.update_layout(scene_aspectmode='data')
     fig.show()  
 
-    N = 65
+    N, NC, k = 65, 5, 3
     u = np.linspace(0, 1, N)
     rc = np.zeros((NC, 3, N))
     tck = [[0]*3 for i in range (NC)]
@@ -90,6 +90,7 @@ def spline(ai):    # 线圈
 def loss(ai):
     ns = 64
     c = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_{}.npy".format(ai))  # 单周期
+    print(c.shape)
     bc = bspline.get_bc_init(ns+1)
     I = np.ones(50)*1e6
     r_coil = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)[:, :-1, np.newaxis, np.newaxis, :]
@@ -123,19 +124,24 @@ def loss(ai):
         return B
 
     def symmetry(r):
+        # rc = np.zeros((10, 64, 1, 1, 3))
+        # rc = rc.at[0:5, :, :, :, :].add(r)
+        # T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        # rc = rc.at[5:10, :, :, :, :].add(np.dot(r, T))
+
         rc_total = np.zeros((50, 64, 1, 1, 3))
-        rc_total = rc_total.at[0:10, :, :, :, :].add(r)
+        rc_total = rc_total.at[0:10, :, :, :, :].add(rc)
         for i in range(5 - 1):        
             theta = 2 * np.pi * (i + 1) / 5
             T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
-            rc_total = rc_total.at[10*(i+1):10*(i+2), :, :, :, :].add(np.dot(r, T))
+            rc_total = rc_total.at[10*(i+1):10*(i+2), :, :, :, :].add(np.dot(rc, T))
         return rc_total
 
     def average_length(r_coil):      #new
         al = np.zeros_like(r_coil)
         al = al.at[:, :-1, :].set(r_coil[:, 1:, :] - r_coil[:, :-1, :])
         al = al.at[:, -1, :].set(r_coil[:, 0, :] - r_coil[:, -1, :])
-        return np.sum(np.linalg.norm(al, axis=-1)) / (10)
+        return np.sum(np.linalg.norm(al, axis=-1)) / (5)
 
     def curvature(der1, der2):
         bottom = np.linalg.norm(der1, axis = -1)**3
@@ -180,7 +186,7 @@ def lossvals(ai):
     fig.show()
     return
 
-def poincare():
+def poincare(ai):
     def symmetry(r):
         rc_total = np.zeros((50, 64, 3))
         rc_total = rc_total.at[0:10, :, :].add(r)
@@ -189,16 +195,16 @@ def poincare():
             T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
             rc_total = rc_total.at[10*(i+1):10*(i+2), :, :].add(np.dot(r, T))
         return rc_total
-    rc = np.load("/home/nxy/codes/focusadd-spline/results/circle/rc_10.npy")  
+    c = np.load("/home/nxy/codes/focusadd-spline/results/circle/c_{}.npy".format(ai))  
     r0 = [6]
-    z0 = [0.2]
+    z0 = [0]
     lenr = len(r0)
     lenz = len(z0)
     assert lenr == lenz
-    # bc = bspline.get_bc_init(c.shape[2])
-    # rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
-    # rc = symmetry(rc[:, :, :])  
-    rc = np.reshape(rc, (50, 65, 3))
+    bc = bspline.get_bc_init(c.shape[2]-2)
+    rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
+    rc = symmetry(rc[:, :-1, :])  
+    rc = np.reshape(rc, (50, 64, 3))
     x = rc[:, :, 0]   
     y = rc[:, :, 1]
     z = rc[:, :, 2]
@@ -219,11 +225,23 @@ def poincare():
     return
 
 
+def stellarator_symmetry(r, ns):
+    rc = np.zeros((10, ns, 3))
+    rc = rc.at[0:5, :, :].add(r)
+
+    T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    rc = rc.at[5:10, :, :].add(np.dot(r, T))
+
+    return rc
 
 
-ai = 'a1'
+
+
+
+
+ai = 'c3'
 lossvals(ai)
 spline(ai)
 loss(ai)
-# poincare()
+# poincare(ai)
 

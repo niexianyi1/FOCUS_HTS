@@ -92,7 +92,6 @@ def fpgivs(piv,ww,cos,sin):     ## 这里的返回值包含ww吗
     pass
 
 
-
 def fprota(cos,sin,a,b):         ## 这里的返回值是a,b吗
     stor1 = a
     stor2 = b
@@ -101,6 +100,31 @@ def fprota(cos,sin,a,b):         ## 这里的返回值是a,b吗
     # return a, b
     pass
 
+
+def fpback(a, z, n, k):
+    k1 = k - 1
+    c[n] = z[n]/a[n,1]
+    i = n-1
+    for j in range(1,n):
+        store = z[i]
+        i1 = k1
+        if j<=k1:
+            i1 = j-1
+        m = i
+        for l in range(i1):
+            m = m+1
+            store = store - a[i,l+1]*c[m]
+        c[i] = store/a[i,1]
+        i = i-1
+    # return c
+    pass
+
+
+def fpknot():
+
+
+    
+    pass
 
 
 
@@ -170,6 +194,50 @@ def fppara(t, u):
         fpint[n] = fp0     # fp0是啥在哪？
         fpint[n-1] = fpold
         nrdata[n] = nplus
+        j1 = 1
+        for j2 in range(idim):                         # 135
+            c[j1] = fpback(a, z[j1], nk1, k1)
+            j1 = j1+n
+        npl1 = nplus*2
+        rn = nplus
+        if fpold-fp>acc:
+            npl1 = rn*fpms/(fpold-fp)
+        nplus = min0(nplus*2, max0(npl1, nplus/2, 1))
+        fpold = fp                                      # 150
+        fpart = 0
+        i = 1
+        l = k2
+        new = 0
+        jj = 0
+        for it in range(m):                             # 180
+            if u[it]>=t[l] and l<=nk1:
+                new = 1
+                l = l+1
+            term = 0
+            l0 = l-k2
+            for j2 in range(idim):                      # 175
+                fac = 0
+                j1 = l0
+                for j in range(k1):
+                    j1 = j1+1
+                    fac = fac+c[j1]*q[it,j]
+                jj = jj+1
+                term = term+(w[it]*(fac-x[jj]))**2
+                l0 = l0+n
+            fpart = fpart+term
+            if new != 0:
+                store = 0.5*term
+                fpint[i] = fpart-store
+                i = i+1
+                fpart = store
+                new = 0
+        fpint[nrint] = fpart
+        for l in range(nplus):                           # 190
+            call fpknot(u,m,t,n,fpint,nrdata,nrint,nest,1)
+            if(n.eq.nmax) go to 10
+            if(n.eq.nest) go to 200
+
+        
 
 
                        

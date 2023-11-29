@@ -1,12 +1,13 @@
 {
-    "n": 3,
-    "lr": 2.5e-05,
+    "n": 2,
+    "lr": 0.0001,
     "lrfr": 1.0,
     "opt": "momentum",
     "mom": 0.9,
     "res": 10,
     "nc": 50,
     "nfp": 5,
+    "ss": 0,
     "ns": 64,
     "ln": 0.015,
     "lb": 0.015,
@@ -40,7 +41,7 @@
     "nstep": 1,
     "poincare_save": "None",
     "init_option": "init_coil",
-    "init_coil": "/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil_c.npy",
+    "init_coil": "/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy",
     "init_c": "/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy",
     "surface_r": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy",
     "surface_nn": "/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy",
@@ -48,7 +49,7 @@
     "axis_file": "None",
     "out_hdf5": "/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_1000",
     "out_coil_makegrid": "/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_1000",
-    "out_loss": "/home/nxy/codes/focusadd-spline/results/circle/loss_a2.npy",
-    "out_c": "/home/nxy/codes/focusadd-spline/results/circle/c_a2.npy",
-    "out_fr": "/home/nxy/codes/focusadd-spline/results/circle/fr_a2.npy"
+    "out_loss": "/home/nxy/codes/focusadd-spline/results/circle/loss_c1.npy",
+    "out_c": "/home/nxy/codes/focusadd-spline/results/circle/c_c1.npy",
+    "out_fr": "/home/nxy/codes/focusadd-spline/results/circle/fr_c1.npy"
 }

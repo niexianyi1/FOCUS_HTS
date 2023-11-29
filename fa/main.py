@@ -21,10 +21,10 @@ if __name__ == "__main__":
         args = json.load(f)
     globals().update(args)
     
-    args['ncnfp'] = ncnfp = int(args['nc']/args['nfp'])
+    args['ncnfp'] = ncnfp = int(args['nc']/args['nfp']/(args['ss']+1))
 
     if args['init_option'] == 'init_coil':
-        c_init, bc = bspline.get_c_init(args['init_coil'], ncnfp, args['ns'])
+        c_init, bc = bspline.get_c_init(args['init_coil'], ncnfp)
     elif args['init_option'] == 'init_c':
         c_init = np.load(args['init_c'])
         if c_init.shape[0] == ncnfp:
@@ -63,9 +63,13 @@ if __name__ == "__main__":
 
     @jit
     def update(i, opt_state_c, opt_state_fr, lossfunc):
-        c = get_params_c(opt_state_c)   
-        c = c.at[:, :, -3:].set(c[:, :, :3])
-        opt_state_c[0][0][0] = c
+        c = get_params_c(opt_state_c)  
+        if i % 2 ==0: 
+            c = c.at[:, :, :3].set(c[:, :, -3:])
+            opt_state_c[0][0][0] = c
+        else:
+            c = c.at[:, :, -3:].set(c[:, :, :3])
+            opt_state_c[0][0][0] = c
         fr = get_params_fr(opt_state_fr)
         params = c, fr
         loss_val, gradient = value_and_grad(
@@ -94,12 +98,12 @@ if __name__ == "__main__":
 
     gradient, loss_val = update(0, opt_state_c, opt_state_fr, lossfunc)
     g_c, g_fr = gradient
-    print( loss_val)
+    np.save('/home/nxy/codes/focusadd-spline/gc.npy', g_c)
+    print('i = 0', loss_val)
 
     for i in range(args['n']-1):
         print('i = ', i+1)
         g_c, g_fr = gradient
-        print('g_c = ', g_c[0])
         opt_state_c = opt_update_c(i, g_c, opt_state_c)
         opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
         gradient, loss_val = update(i, opt_state_c, opt_state_fr, lossfunc)
@@ -110,7 +114,6 @@ if __name__ == "__main__":
     params = (get_params_c(opt_state_c), get_params_fr(opt_state_fr))
     c = params[0]    
     fr = params[1] 
-    c = c.at[:, :, -3:].set(c[:, :, :3])
 
     # np.save(args['out_c'], c)          ### c_new有3个重合控制点
     # np.save(args['out_fr'], params[1])

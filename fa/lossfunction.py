@@ -83,7 +83,6 @@ class LossFunction:
         # print(np.sum(np.sum(self.nn * B_all/
         #             np.linalg.norm(B_all, axis=-1)[:, :, np.newaxis], axis=-1) * self.sg))
         Bn_max = np.max(Bn)
-                
         return  Bn_mean, Bn_max
 
     def biotSavart(self):

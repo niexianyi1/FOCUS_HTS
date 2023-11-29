@@ -3,9 +3,9 @@ import json
 
 args = {
     # 优化器参数
-    'n': 10,            # int, "--number_iter"
+    'n': 1000,            # int, "--number_iter"
                         # 优化器迭代次数
-    'lr': 2.5e-5,       # float, "--learning_rate_c"
+    'lr': 1e-4,       # float, "--learning_rate_c"
                         # 参数c 迭代步长
     'lrfr': 1.0,        # float, "--learning_rate_fr"
                         # 参数fr 迭代步长
@@ -21,6 +21,8 @@ args = {
                     # 线圈总数
     'nfp': 5,       # int, "--number_field_periods"
                     # 线圈周期数
+    'ss': 1,        # int, "--stellarator_symmetry"
+                    # 仿星器对称，1为对称，0为非对称
     'ns': 64,       # int, "--number_segments"
                     # 每个线圈分段数
     
@@ -91,7 +93,7 @@ args = {
     'init_option': 'init_coil',
     # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
 
-    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy',       
+    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil_5.npy',       
     # str, makegird 类型, 初始线圈文件名
 
     'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy',
@@ -111,13 +113,13 @@ args = {
     'out_coil_makegrid': '/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_1000',
     # str, makegrid 类型, 输出线圈文件名 
                  
-    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_a2.npy',         
+    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_c1.npy',         
     # str, 输出损失函数值（lossvals）文件名
 
-    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a2.npy',
+    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_c1.npy',
     # str, 输出参数c文件名
 
-    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_a2.npy'
+    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_c1.npy'
     # str, 输出参数fr文件名
 
 }

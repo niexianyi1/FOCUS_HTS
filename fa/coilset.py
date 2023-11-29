@@ -24,6 +24,7 @@ class CoilSet:
         self.nc = args['nc']
         self.nfp = args['nfp']
         self.ncnfp = args['ncnfp']
+        self.ss = args['ss']
         self.ns = args['ns']
         self.ln = args['ln']
         self.lb = args['lb']
@@ -51,10 +52,12 @@ class CoilSet:
         r = CoilSet.compute_r(self, fr, normal, binormal, r_centroid)
         frame = tangent, normal, binormal
         dl = CoilSet.compute_dl(self, params, frame, der1, der2, r_centroid)
-        # r = CoilSet.stellarator_symmetry(self, r)
+        if self.ss == 1 :
+            r = CoilSet.stellarator_symmetry(self, r)
+            dl = CoilSet.stellarator_symmetry(self, dl)
         r = CoilSet.symmetry(self, r)
-        # dl = CoilSet.stellarator_symmetry(self, dl)
         dl = CoilSet.symmetry(self, dl)
+
         return I_new, dl, r, der1, der2
 
     def compute_r_centroid(self, c):         # rc 是（nc/nfp,ns+1,3）
@@ -238,24 +241,24 @@ class CoilSet:
         return dl[:, :-1, :, :, :] * (1 / self.ns)
 
     def symmetry(self, r):
+        ncnfp = self.ncnfp*(self.ss+1)
         rc_total = np.zeros((self.nc, self.ns, self.nnr, self.nbr, 3))
-        rc_total = rc_total.at[0:self.ncnfp, :, :, :, :].add(r)
+        rc_total = rc_total.at[0:ncnfp, :, :, :, :].add(r)
         for i in range(self.nfp - 1):        
             theta = 2 * pi * (i + 1) / self.nfp
             T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
-            rc_total = rc_total.at[self.ncnfp*(i+1):self.ncnfp*(i+2), :, :, :, :].add(np.dot(r, T))
+            rc_total = rc_total.at[ncnfp*(i+1):ncnfp*(i+2), :, :, :, :].add(np.dot(r, T))
         
         return rc_total
 
-    # def stellarator_symmetry(self, r):
-    #     rc = np.zeros((self.ncnfp*2, self.ns, self.nnr, self.nbr, 3))
-    #     rc = rc.at[0:self.ncnfp, :, :, :, :].add(r)
-       
-    #     theta = 2 * pi / self.nfp
-    #     T = np.array([[np.cos(theta), np.sin(theta), 0], [np.sin(theta), -np.cos(theta), 0], [0, 0, -1]])
-    #     rc = rc.at[self.ncnfp:self.ncnfp*2, :, :, :, :].add(np.dot(r, T))
+    def stellarator_symmetry(self, r):
+        rc = np.zeros((self.ncnfp*2, self.ns, self.nnr, self.nbr, 3))
+        rc = rc.at[0:self.ncnfp, :, :, :, :].add(r)
+
+        T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        rc = rc.at[self.ncnfp:self.ncnfp*2, :, :, :, :].add(np.dot(r, T))
     
-    #     return rc
+        return rc
 
     def read_hdf5(self, filename):
         f = h5py.File(filename, "r")
