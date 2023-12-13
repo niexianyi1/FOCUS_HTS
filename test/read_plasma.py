@@ -2,7 +2,6 @@
 
 import json
 import plotly.graph_objects as go
-import bspline
 import jax.numpy as np
 import numpy
 pi = np.pi
@@ -149,13 +148,13 @@ def curvature(der1, der2):
 
 
 
-rc = read_makegrid('/home/nxy/codes/focusadd-spline/ellipse.coils')
-c, bc = bspline.prep(rc, nc, ns+1, 3)
-der1, wrk1 = vmap(lambda c :bspline.der1_splev(bc, c), in_axes=0, out_axes=0)(c)
-der2 = vmap(lambda wrk1 :bspline.der2_splev(bc, wrk1), in_axes=0, out_axes=0)(wrk1)[:, :-1, :]
-dl = der1[:, :-1, np.newaxis, np.newaxis, :]/ns
-rc = rc[:, :-1, np.newaxis, np.newaxis, :]
-I = np.ones(nc) * 1e6
+# rc = read_makegrid('/home/nxy/codes/focusadd-spline/ellipse.coils')
+# c, bc = bspline.prep(rc, nc, ns+1, 3)
+# der1, wrk1 = vmap(lambda c :bspline.der1_splev(bc, c), in_axes=0, out_axes=0)(c)
+# der2 = vmap(lambda wrk1 :bspline.der2_splev(bc, wrk1), in_axes=0, out_axes=0)(wrk1)[:, :-1, :]
+# dl = der1[:, :-1, np.newaxis, np.newaxis, :]/ns
+# rc = rc[:, :-1, np.newaxis, np.newaxis, :]
+# I = np.ones(nc) * 1e6
 
 # al = average_length(rc[:, :-1, :])
 # kmean, kmax = curvature(der1[:, :-1, :], der2)
@@ -163,8 +162,11 @@ I = np.ones(nc) * 1e6
 
 R, Z, Nfp = read_w7x("/home/nxy/codes/focusadd-spline/plasma.boundary")
 # print(R, Z)
-r, nn, sg = get_w7x_data(R, Z, 64, 64, Nfp)
-
+r, nn, sg = get_w7x_data(R, Z, 64*4, 64, Nfp)
+np.save('/home/nxy/codes/focusadd-spline/initfiles/ellipse/r_surf.npy', r[:64])
+np.save('/home/nxy/codes/focusadd-spline/initfiles/ellipse/nn_surf.npy', nn[:64])
+np.save('/home/nxy/codes/focusadd-spline/initfiles/ellipse/sg_surf.npy', sg[:64])
+print('finish')
 # rc = np.reshape(r, (64*64, 3))
 # fig = go.Figure()
 # fig.add_scatter3d(x=rc[:, 0],y=rc[:, 1],z=rc[:, 2], name='rc', mode='markers', marker_size = 2)
@@ -172,5 +174,4 @@ r, nn, sg = get_w7x_data(R, Z, 64, 64, Nfp)
 # fig.show()    
 
 
-Bn_mean, Bn_max, Bnb, Bns = quadratic_flux(I, dl, r, rc, nn, sg)
-print(Bn_mean, Bnb, Bn_max, Bns)
+

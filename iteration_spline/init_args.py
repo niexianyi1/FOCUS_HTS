@@ -1,0 +1,145 @@
+import json
+# import numpy as np
+
+args = {
+    # 优化器参数
+    'n': 1000,            # int, "--number_iter"
+                        # 优化器迭代次数
+    'lr': 1e-4,       # float, "--learning_rate_c"
+                        # 参数c 迭代步长
+    'lrfr': 1.0,        # float, "--learning_rate_fr"
+                        # 参数fr 迭代步长
+    'opt': 'momentum',  # str, "--optimizer"
+                        # "Name of optimizer. Either SGD, GD (same), Momentum, or Adam"
+    'mom': 0.9,         # float, "--momentum_mass"
+                        # Momentum mass parameter.
+    'res': 10,          # int, "--axis_resolution"
+                        # Resolution of the axis, multiplies NZ.
+
+    # 线圈参数
+    'nc': 50,       # int, "--number_coils"
+                    # 线圈总数
+    'nfp': 5,       # int, "--number_field_periods"
+                    # 线圈周期数
+    'ss': 1,        # int, "--stellarator_symmetry"
+                    # 仿星器对称，1为对称，0为非对称
+    'nic': 5,       # int, "--number_independent_coils"
+                    # 独立线圈数
+    'ns': 64,       # int, "--number_segments"
+                    # 每个线圈分段数
+    'nfc':6,        # int, "--num_fourier_coils"
+                    # 表示线圈的fourier分量数
+    'ncp': 67,      # int, "--number_contral_points"
+                    # 每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合
+    'k': 3,         # int, "--spline_order"
+                    # spline阶数,默认为3阶
+
+    # 有限截面参数
+    'ln': 0.015,    # float, "--length_normal"
+                    # 有限截面下每个线圈的法向间隔的长度
+    'lb': 0.015,    # float, "--length_binormal"
+                    # 有限截面下每个线圈的副法向间隔的长度
+    'nnr': 1,       # int, "--number_normal_rotate"
+                    # 有限截面下的法向线圈数量
+    'nbr': 1,       # int, "--number_binormal_rotate"
+                    # 有限截面下的副法向线圈数量
+    
+    'rc': 1.0,      # float,"--radius_coil"
+                    # 线圈半径
+    'nr': 0,        # int,  "--number_rotate"
+                    # 有限截面下每个线圈的旋转数
+    'nfr': 0,       # int, "--number_fourier_rotate"
+                    # 每个线圈的旋转的傅里叶分量的个数
+   
+    # 磁面参数
+    'nt': 20,       # int, "--number_theta" 
+                    # 磁面上\theta(极向)的网格点数
+    'nz': 150,      # int, "--number_zeta"
+                    # 磁面上\zeta(环向)的网格点数
+    'rs': 0.5,      # float, "--radius_surface"
+                    # 磁面的半径
+ 
+    # loss function 权重参数
+    'wb': 1,        # float, "--weight_Bnormal"
+                    # 法向磁场分量 权重
+    'wl': 0,      # float, "--weight_length"
+                    # 单根线圈平均长度 
+    'wc': 0,        # float, "--weight_curvature"
+                    # 曲率 
+    'wcm': 0,    # float, "--weight_curvature_max"
+                    # 最大曲率
+    'wt': 0,        # float, "--weight_torsion"
+                    # 扭转 
+    'wtm':0,        # float, "--weight_torsion——max"
+                    # 最大扭转
+    'wdcc': 0,      # float, "--weight_distance_coil_coil"
+                    # 线圈间距 
+    'wdcs': 0,       # float, "--weight_distance_coil_surface"
+                    # 线圈与磁面距离 
+
+    
+    # 画图参数
+    'nps': 500,      # int, "--number_points"
+                    # 画线圈时的散点数
+    'init': False,  # bool, "--initial"
+                    # 是否画初始线圈和优化线圈的对比图
+    'log': False,   # bool, "--log10(lossvals)"
+                    # 是否画损失函数值的对数图  
+    'r0': [5.8],      # list, 
+                    # 画poincare图时的起点径向坐标
+    'z0': [0.2],      # list,
+                    # 画poincare图时的起点z 向坐标
+    'phi0': 0,      # float,
+                    # 画poincare图时的环向坐标
+    'niter': 200,   # int, 
+                    # 画poincare图时的磁力线追踪周期数
+    'nstep': 1,     # int, "number_step"
+                    # 画poincare图时的每个周期的追踪步数
+    'poincare_save': 'None',    # str,
+                                # 输出poincare图坐标数据文件名, None不输出
+
+    # 文件
+    'init_option': 'init_coil',
+    # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
+
+    'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil_5.npy',       
+    # str, makegird 类型, 初始线圈文件名
+
+    'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy',
+    # str, 初始参数c文件名 ， c应为[nc, 3, ns] 或[nc/nfp, 3, ns] 或为ns+3
+
+    'surface_r': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy',
+    'surface_nn': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy',
+    'surface_sg': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_sg_surf.npy',
+    # str, 磁面参数文件名
+
+    'axis_file': 'None',        
+    # str,  "Name of axis file"
+
+    'out_hdf5': '/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_1000',        
+    # str, 输出线圈参数文件名
+
+    'out_coil_makegrid': '/home/nxy/codes/focusadd-spline/results/circle/out_coil_makegrid_1000',
+    # str, makegrid 类型, 输出线圈文件名 
+                 
+    'out_loss': '/home/nxy/codes/focusadd-spline/results/circle/loss_c1.npy',         
+    # str, 输出损失函数值（lossvals）文件名
+
+    'out_c': '/home/nxy/codes/focusadd-spline/results/circle/c_c1.npy',
+    # str, 输出参数c文件名
+
+    'out_fr': '/home/nxy/codes/focusadd-spline/results/circle/fr_c1.npy'
+    # str, 输出参数fr文件名
+
+}
+
+
+
+if __name__ == "__main__":
+    with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'w') as f:
+        json.dump(args, f, indent=4)
+
+
+
+
+
