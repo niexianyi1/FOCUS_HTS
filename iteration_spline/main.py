@@ -22,17 +22,18 @@ if __name__ == "__main__":
         args = json.load(f)
     globals().update(args)
     
-    args['nic'] = nic = int(args['nc']/args['nfp']/(args['ss']+1))
+    assert args['nic'] == int(args['nc']/args['nfp']/(args['ss']+1))
 
     if args['init_option'] == 'init_coil':
-        c_init, bc, tj = bspline.get_c_init(args['init_coil'], args['file_type'], nic, args['ns'], args['ncp'])
+        c_init, bc, tj = bspline.get_c_init(args['init_coil'], args['file_type'],
+                                        args['nic'], args['ns'], args['ncp'])
     
     elif args['init_option'] == 'init_c':
         c_init = np.load(args['init_c'])
-        if c_init.shape[0] == nic:
+        if c_init.shape[0] == args['nic']:
             pass
         elif c_init.shape[0] == args['nc']:   ## 默认取前一个周期的线圈数
-            c_init = c_init[nic, :, :]
+            c_init = c_init[args['nic'], :, :]
         bc, tj = bspline.get_bc_init(args['ns'], args['ncp'])
     
     else:
@@ -65,8 +66,8 @@ if __name__ == "__main__":
     @jit
     def update(i, opt_state_c, opt_state_fr, lossfunc):
         c = get_params_c(opt_state_c)  
-        c = c.at[:, :, -3:].set(c[:, :, :3])
-        opt_state_c[0][0][0] = c
+        # c = c.at[:, :, -3:].set(c[:, :, :3])
+        # opt_state_c[0][0][0] = c
         fr = get_params_fr(opt_state_fr)
         params = c, fr
         loss_val, gradient = value_and_grad(

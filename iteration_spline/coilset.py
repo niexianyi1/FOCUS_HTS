@@ -54,35 +54,25 @@ class CoilSet:
         frame = tangent, normal, binormal
         dl = CoilSet.compute_dl(self, params, frame, der1, der2, r_centroid)
         if self.ss == 1 :
-            r = CoilSet.stellarator_symmetry(self, r)
-            dl = CoilSet.stellarator_symmetry(self, dl)
+            r = CoilSet.stellarator_symmetry_r(self, r)
+            dl = CoilSet.stellarator_symmetry_der(self, dl)
         r = CoilSet.symmetry(self, r)
         dl = CoilSet.symmetry(self, dl)
 
         return I_new, dl, r, der1, der2
 
     def compute_r_centroid(self, c):         # rc 是（nc/nfp,ns+1,3）
-        # rc = vmap(lambda c :bspline.splev(self.bc, c, self.tj, self.ns), 
-        #             in_axes=0, out_axes=0)(c)
-        t, u, k = self.bc
-        coil = np.zeros((self.nic, self.ns, 3))
-        for i in range(self.nic):
-            coil = coil.at[i].set(bspline.splev(t[i], u[i], c[i], self.tj[i], self.ns))
-        return coil
+        r_centroid = vmap(lambda c :bspline.splev(self.bc, c, self.tj, self.ns), 
+                    in_axes=0, out_axes=0)(c)
+        return r_centroid
 
     def compute_der(self, c):                    
         """ Computes  1,2,3 derivatives of the rc """
-        # der1, wrk1 = vmap(lambda c :bspline.der1_splev(self.bc, c, self.tj, self.ns), 
-        #                     in_axes=0, out_axes=0)(c)
-        # der2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1, self.tj, self.ns),
-        #                     in_axes=0, out_axes=0)(wrk1)
+        der1, wrk1 = vmap(lambda c :bspline.der1_splev(self.bc, c, self.tj, self.ns), 
+                            in_axes=0, out_axes=0)(c)
+        der2 = vmap(lambda wrk1 :bspline.der2_splev(self.bc, wrk1, self.tj, self.ns),
+                            in_axes=0, out_axes=0)(wrk1)
 
-        t, u, k = self.bc
-        der1 = der2 = np.zeros((self.nic, self.ns, 3))
-        for i in range(self.nic):
-            d10, wrk1 = bspline.der1_splev(t[i], u[i], c[i], self.tj[i], self.ns)
-            der1 = der1.at[i].set(d10)
-            der2 = der2.at[i].set(bspline.der2_splev(t[i], u[i], wrk1, self.tj[i], self.ns))
         return der1, der2
         
     def compute_com(self, der1, r_centroid):    
@@ -266,11 +256,18 @@ class CoilSet:
         
         return rc_total
 
-    def stellarator_symmetry(self, r):
+    def stellarator_symmetry_r(self, r):
         rc = np.zeros((self.nic*2, self.ns, self.nnr, self.nbr, 3))
         rc = rc.at[0:self.nic, :, :, :, :].add(r)
         T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
         rc = rc.at[self.nic:self.nic*2, :, :, :, :].add(np.dot(r, T))
+        return rc
+
+    def stellarator_symmetry_der(self, r):
+        rc = np.zeros((self.nic*2, self.ns, self.nnr, self.nbr, 3))
+        rc = rc.at[0:self.nic, :, :, :, :].add(r)
+        T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        rc = rc.at[self.nic:self.nic*2, :, :, :, :].add(-np.dot(r, T))
         return rc
 
     def read_hdf5(self, filename):

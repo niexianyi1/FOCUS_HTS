@@ -15,37 +15,35 @@ with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:
 globals().update(args)
 
 
-
+def get_bc_init(ns, ncp):
+    k = 3
+    t = np.linspace(-3/(ncp-3), (ncp)/(ncp-3), ncp+4) 
+    u = np.linspace(0, (ns-1)/ns ,ns)
+    bc = [t, u, k]
+    tj = tjev(bc)
+    return bc, tj 
+def tjev(bc):
+    t, u, _ = bc
+    t0 = numpy.zeros_like(t)
+    u0 = numpy.zeros_like(u)
+    tj = numpy.zeros_like(u)          # len(t) = nic
+    j = 0
+    for i in range(len(t)):
+        t0[i] = t[ i]
+    for i in range(len(u)):  # len(u[a]) = ns
+        u0[i] = u[ i]
+        while u0[i]>=t0[j+1] :
+            j = j+1
+        tj[i] = j
+    return tj
 def spline(ai):    # 线圈
-
-    def get_bc_init(ns, ncp):
-        k = 3
-        t = np.linspace(-3/(ncp-3), (ncp)/(ncp-3), ncp+4) 
-        u = np.linspace(0, (ns-1)/ns ,ns)
-        bc = [t, u, k]
-        tj = tjev(bc)
-        return bc, tj 
-    def tjev(bc):
-        t, u, _ = bc
-        t0 = numpy.zeros_like(t)
-        u0 = numpy.zeros_like(u)
-        tj = numpy.zeros_like(u)          # len(t) = nic
-        j = 0
-        for i in range(len(t)):
-            t0[i] = t[ i]
-        for i in range(len(u)):  # len(u[a]) = ns
-            u0[i] = u[ i]
-            while u0[i]>=t0[j+1] :
-                j = j+1
-            tj[i] = j
-        return tj
 
     # ----- rc_new -----  
     c = np.load("/home/nxy/codes/focusadd-spline/results_b/circle/c_{}.npy".format(ai))
 
     bc, tj = get_bc_init(nps, ncp)
     t, u, k = bc
-    rc_new =  vmap(lambda c :bspline.splev(t, u, c, tj, ns), 
+    rc_new =  vmap(lambda c :bspline.splev(t, u, c, tj, nps), 
                     in_axes=0, out_axes=0)(c)
 
     # ----- 单线圈 -----
@@ -101,19 +99,21 @@ def spline(ai):    # 线圈
 
 def loss(ai):
     c = np.load("/home/nxy/codes/focusadd-spline/results_b/circle/c_{}.npy".format(ai))  # 单周期
-    bc, tj = bspline.get_bc_init(ns, ncp)
+    bc, tj = get_bc_init(ns, ncp)
+    t,u,k=bc
     I = np.ones(nc)*1e6
-    r_coil = vmap(lambda c :bspline.splev(bc, c, tj, ns), in_axes=0, out_axes=0)(c)[:, :, np.newaxis, np.newaxis, :]
+    r_coil = vmap(lambda c :bspline.splev(t,u, c, tj, ns), in_axes=0, out_axes=0)(c)[:, :, np.newaxis, np.newaxis, :]
+
     r_surf = np.load(args['surface_r'])
     nn = np.load(args['surface_nn'])
     sg = np.load(args['surface_sg'])
-    der1, wrk1 = vmap(lambda c :bspline.der1_splev(bc, c, tj, ns), in_axes=0, out_axes=0)(c)
-    der2 = vmap(lambda wrk1 :bspline.der2_splev(bc, wrk1, tj, ns), in_axes=0, out_axes=0)(wrk1)
+    der1, wrk1 = vmap(lambda c :bspline.der1_splev(t,u, c, tj, ns), in_axes=0, out_axes=0)(c)
+    der2 = vmap(lambda wrk1 :bspline.der2_splev(t,u, wrk1, tj, ns), in_axes=0, out_axes=0)(wrk1)
     dl = der1[:, :, np.newaxis, np.newaxis, :]/ns
 
     def quadratic_flux(I, dl, r_surf, r_coil, nn, sg):
         r_coil = symmetry(r_coil)
-        dl = symmetry(dl)
+        dl = symmetry_der(dl)
         B = biotSavart(I ,dl, r_surf, r_coil)  
         B_all = B        
         print('Bmax = ', np.max(np.linalg.norm(B_all, axis=-1)))
@@ -137,6 +137,22 @@ def loss(ai):
             rc = rc.at[:nic, :, :, :, :].add(r)
             T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
             rc = rc.at[nic:nic*2, :, :, :, :].add(np.dot(r, T))
+        else:
+            rc = r
+        rc_total = np.zeros((nc, ns, nnr, nbr, 3))
+        rc_total = rc_total.at[:nic*(ss+1), :, :, :, :].add(rc)
+        for i in range(nfp - 1):        
+            theta = 2 * np.pi * (i + 1) / nfp
+            T = np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+            rc_total = rc_total.at[nic*(ss+1)*(i+1):nic*(ss+1)*(i+2), :, :, :, :].add(np.dot(rc, T))
+        return rc_total
+
+    def symmetry_der(r):
+        if ss == 1:
+            rc = np.zeros((nic*2, ns, nnr, nbr, 3))
+            rc = rc.at[:nic, :, :, :, :].add(r)
+            T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+            rc = rc.at[nic:nic*2, :, :, :, :].add(-np.dot(r, T))
         else:
             rc = r
         rc_total = np.zeros((nc, ns, nnr, nbr, 3))
@@ -182,7 +198,14 @@ def loss(ai):
     k_mean, k_max = curvature(der1, der2)
     dcc = distance_cc(r_coil)
     dcs = distance_cs(r_coil, r_surf)
-    print(Bn, length, k_mean, dcc, dcs, k_max)
+
+    print(Bn)
+    print(length)
+    print(k_mean)
+    print(dcc)
+    print(dcs)
+    print(k_max)
+
     print(wb*Bn + wl*length + wc*k_mean + wdcc*dcc + wdcs*dcs + wcm*k_max )
     return Bn, length, k_mean, dcc, dcs, k_max
 
@@ -245,9 +268,9 @@ def stellarator_symmetry(r, ns):
     return rc
 
 
-ai = 'a2'
-lossvals(ai)
-spline(ai)
+ai = 'a1'
+# lossvals(ai)
+# spline(ai)
 loss(ai)
 # poincare(ai)
 

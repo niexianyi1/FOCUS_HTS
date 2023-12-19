@@ -4,7 +4,7 @@ from jax import vmap
 import bspline
 import sys
 import coilpy
-
+import plotly.graph_objects as go
 
 
 def poincare(r0, z0, bc, c):

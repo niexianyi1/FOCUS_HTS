@@ -25,7 +25,7 @@ if __name__ == "__main__":
     args['I'] = I
     fr_init = np.zeros((2, args['nic'], args['nfr'])) 
 
-    def args_to_op(optimizer_string, lr, mom=0.9, var=0.999, eps=1e-7):
+    def args_to_op(optimizer_string, lr, mom=0.9, var=0.999, eps=1e-8):
         return {
             "gd": lambda lr, *unused: op.sgd(lr),
             "sgd": lambda lr, *unused: op.sgd(lr),
@@ -59,31 +59,38 @@ if __name__ == "__main__":
 
     coilset = CoilSet(args)
     coil_output_func = coilset.coilset
-    opt_init_fc, opt_update_fc, get_params_fc = args_to_op(
-        args['opt'], args['lr'], args['mom'],
-    )
-    opt_init_fr, opt_update_fr, get_params_fr = args_to_op(
-        args['opt'], args['lrfr'], args['mom'],
-    )
-    opt_state_fc = opt_init_fc(fc_init)
-    opt_state_fr = opt_init_fr(fr_init)
+    # opt_init_fc, opt_update_fc, get_params_fc = args_to_op(
+    #     args['opt'], args['lr'], args['mom'],
+    # )
+    # opt_init_fr, opt_update_fr, get_params_fr = args_to_op(
+    #     args['opt'], args['lrfr'], args['mom'],
+    # )
+    # opt_state_fc = opt_init_fc(fc_init)
+    # opt_state_fr = opt_init_fr(fr_init)
 
 
     
     start = time.time()
 
-    for j in range(5):
+    args['opt'] = 'adam'
+    for j in range(10):
+        print('j = ', j)
+        args['lr'] = 0.0001+j*0.0001        
+        opt_init_fc, opt_update_fc, get_params_fc = args_to_op(
+        args['opt'], args['lr'], args['mom'],)
+        opt_init_fr, opt_update_fr, get_params_fr = args_to_op(
+        args['opt'], args['lrfr'], args['mom'],)
+
         opt_state_fc = opt_init_fc(fc_init)
         opt_state_fr = opt_init_fr(fr_init)
-        print('j = ', j)
-        args['wl'] = 1+j
-        args['out_loss'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/loss_d{}.npy'.format(j)
-        args['out_c'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fc_d{}.npy'.format(j)
-        args['out_fr'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fr_d{}.npy'.format(j)
+
+        args['out_loss'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/loss_lrm{}.npy'.format(j)
+        args['out_fc'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fc_lrm{}.npy'.format(j)
+        args['out_fr'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fr_lrm{}.npy'.format(j)
         loss_vals = []
         lossfunc = LossFunction(args, surface_data, B_extern)
         gradient, loss_val = update(0, opt_state_fc, opt_state_fr, lossfunc)
-        print('i = 0', loss_val)
+        print('i = 0')
 
         for i in range(args['n']-1):
             print('i = ', i+1)
@@ -92,13 +99,12 @@ if __name__ == "__main__":
             opt_state_fr = opt_update_fr(i+1, g_fr, opt_state_fr)     
             gradient, loss_val = update(i+1, opt_state_fc, opt_state_fr, lossfunc)
             loss_vals.append(loss_val)
-            print(loss_val)
 
         end = time.time()
         print(end - start)
         params = (get_params_fc(opt_state_fc), get_params_fr(opt_state_fr))    
 
-        np.save(args['out_c'], params[0])        
+        np.save(args['out_fc'], params[0])        
         np.save(args['out_fr'], params[1])
         np.save(args['out_loss'], loss_vals)
 

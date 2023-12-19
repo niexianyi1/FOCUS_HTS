@@ -1,8 +1,6 @@
 import jax.numpy as np
 from jax import jit, vmap
-import tables as tb
 import numpy
-import h5py
 from jax.config import config
 import fourier
 config.update("jax_enable_x64", True)
@@ -111,16 +109,16 @@ class CoilSet:
         return r0
 
     def compute_normal(self, r_centroid, tangent):    
-        r0 = CoilSet.compute_coil_mid(self, r_centroid)
-        delta = r_centroid - r0[:, np.newaxis, :]
+        coil_mid = CoilSet.compute_coil_mid(self, r_centroid)
+        delta = r_centroid - coil_mid[:, np.newaxis, :]
         dp = CoilSet.dot_product_rank3_tensor(tangent, delta)
         normal = delta - tangent * dp[:, :, np.newaxis]
         mag = np.linalg.norm(normal, axis=-1)
         return normal / mag[:, :, np.newaxis]
 
     def compute_normal_deriv(self, tangent, tangent_deriv, der1, r_centroid):          
-        r0 = CoilSet.compute_coil_mid(self, r_centroid)
-        delta = r_centroid - r0[:, np.newaxis, :]
+        coil_mid = CoilSet.compute_coil_mid(self, r_centroid)
+        delta = r_centroid - coil_mid[:, np.newaxis, :]
         dp1 = CoilSet.dot_product_rank3_tensor(tangent, delta)
         dp2 = CoilSet.dot_product_rank3_tensor(tangent, der1)
         dp3 = CoilSet.dot_product_rank3_tensor(tangent_deriv, delta)
@@ -268,93 +266,8 @@ class CoilSet:
         rc = rc.at[self.nic:self.nic*2, :, :, :, :].add(-np.dot(r, T))
         return rc
 
-    def read_hdf5(self, filename):
-        f = h5py.File(filename, "r")
-        arge = {}
-        for key in list(f.keys()):
-            arge.update({key: f[key][:]})
-        f.close()
-        return arge
-
-    def read_makegrid(self, filename):      # 处理一下
-        r = np.zeros((self.nc, self.ns+1, 3))
-        with open(filename) as f:
-            _ = f.readline()
-            _ = f.readline()
-            _ = f.readline()
-            for i in range(self.nc):
-                for s in range(self.ns):
-                    x = f.readline().split()
-                    r = r.at[i, s, 0].set(float(x[0]))
-                    r = r.at[i, s, 1].set(float(x[1]))
-                    r = r.at[i, s, 2].set(float(x[2]))
-                _ = f.readline()
-        r = r.at[:, -1, :].set(r[:, 0, :])
-        return r
 
 
-    def write_hdf5(self, params):     # 根据需求写入数据
-        """ Write coils in HDF5 output format.
-		Input:
-
-		output_file (string): Path to outputfile, string should include .hdf5 format
-
-
-		"""
-
-        fc, fr = params
-        with tb.open_file(self.out_hdf5, "w") as f:
-            coildata = numpy.dtype(
-                [
-                    ("nc", int),
-                    ("ns", int),
-                    ("ln", float),
-                    ("lb", float),
-                    ("nnr", int),
-                    ("nbr", int),
-                    ("rc", float),
-                    ("nr", int),
-                    ("nfr", int),
-                ]
-            )
-            arr = numpy.array(
-                [(self.nc, self.ns, self.ln, self.lb, self.nnr, self.nbr, self.rc, self.nr, self.nfr)], dtype=coildata,
-            )
-            f.create_table("/", "coildata", coildata)
-            f.root.coildata.append(arr)
-            f.create_array("/", "coilspline", numpy.asarray(fc))
-            f.create_array("/", "coilrotation", numpy.asarray(fr))
-        return
-
-    def write_makegrid(self, params):    # 或者直接输入r, I
-        I, _, r = CoilSet.coilset(self, params)
-        with open(self.out_coil_makegrid, "w") as f:
-            f.write("periods {}\n".format(0))
-            f.write("begin filament\n")
-            f.write("FOCUSADD Coils\n")
-            for i in range(self.nic):
-                for n in range(self.nnr):
-                    for b in range(self.nbr):
-                        for s in range(self.ns):
-                            f.write(
-                                "{} {} {} {}\n".format(
-                                    r[i, s, n, b, 0],
-                                    r[i, s, n, b, 1],
-                                    r[i, s, n, b, 2],
-                                    I[i],
-                                )
-                            )
-                        f.write(
-                            "{} {} {} {} {} {}\n".format(
-                                r[i, 0, n, b, 0],
-                                r[i, 0, n, b, 1],
-                                r[i, 0, n, b, 2],
-                                0.0,
-                                "{},{},{}".format(i, n, b),
-                                "coil/filament1/filament2",
-                            )
-                        )
-        return
 
 
 

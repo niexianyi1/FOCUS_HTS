@@ -11,6 +11,7 @@ from coilset import CoilSet
 from lossfunction import LossFunction    
 import fourier
 import plot
+import output
 
 config.update("jax_enable_x64", True)
 config.update('jax_disable_jit', True)
@@ -81,26 +82,41 @@ if __name__ == "__main__":
     gradient, loss_val = update(0, opt_state_fc, opt_state_fr, lossfunc)
     print('i = 0', loss_val)
 
-    for i in range(args['n']-1):
-        print('i = ', i+1)
-        g_fc, g_fr = gradient
-        opt_state_fc = opt_update_fc(i+1, g_fc, opt_state_fc)
-        opt_state_fr = opt_update_fr(i+1, g_fr, opt_state_fr)     
-        gradient, loss_val = update(i+1, opt_state_fc, opt_state_fr, lossfunc)
-        loss_vals.append(loss_val)
-        print(loss_val)
+
+    if args['n'] != 0:
+        for i in range(args['n']):
+            print('i = ', i+1)
+            g_fc, g_fr = gradient
+            opt_state_fc = opt_update_fc(i, g_fc, opt_state_fc)
+            opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
+            gradient, loss_val = update(i, opt_state_fc, opt_state_fr, lossfunc)
+            loss_vals.append(loss_val)
+            print(loss_val)
+
+    if args['obj'] != 0:
+        i=0
+        while loss_val > args['obj']:
+            print('i = ', i)
+            i = i+1
+            g_fc, g_fr = gradient
+            opt_state_fc = opt_update_fc(i, g_fc, opt_state_fc)
+            opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)     
+            gradient, loss_val = update(i, opt_state_fc, opt_state_fr, lossfunc)
+            loss_vals.append(loss_val)
+            print(loss_val)
+
     end = time.time()
     print(end - start)
     params = (get_params_fc(opt_state_fc), get_params_fr(opt_state_fr))
     fc = params[0]    
     fr = params[1] 
 
-    # np.save(args['out_fc'], fc)         
-    # np.save(args['out_fr'], fr)
-    # np.save(args['out_loss'], loss_vals)
+    np.save(args['out_fc'], fc)         
+    np.save(args['out_fr'], fr)
+    np.save(args['out_loss'], loss_vals)
 
-    # coilset.write_hdf5(params)
-    # coilset.write_makegrid(params)
+    # output.write_hdf5(params, args)
+    # output.write_makegrid(params, args)
 
     # paint = plot.plot(args)  
     # paint.plot_loss(loss_vals)

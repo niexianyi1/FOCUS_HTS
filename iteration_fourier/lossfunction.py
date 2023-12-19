@@ -37,7 +37,7 @@ class LossFunction:
         self.dl = dl
         self.r_coil = r_coil
         Bn_mean, Bn_max = LossFunction.quadratic_flux(self)
-        length = LossFunction.average_length(self)
+        length, al = LossFunction.average_length(self)
         k_mean, k_max = LossFunction.curvature(der1, der2)
         t_mean, t_max = LossFunction.torsion(der1, der2, der3)
         dcc_min = LossFunction.distance_cc(self)
@@ -140,10 +140,11 @@ class LossFunction:
         return k_mean, k_max
 
     def average_length(self):      #new
-        al = np.zeros_like(self.r_coil)
-        al = al.at[:, :-1, :].set(self.r_coil[:, 1:, :] - self.r_coil[:, :-1, :])
-        al = al.at[:, -1, :].set(self.r_coil[:, 0, :] - self.r_coil[:, -1, :])
-        return np.sum(np.linalg.norm(al, axis=-1)) / (self.nc)
+        r_coil = self.r_coil[:, :, 0, 0, :]
+        al = np.zeros_like(r_coil)
+        al = al.at[:, :-1, :].set(r_coil[:, 1:, :] - r_coil[:, :-1, :])
+        al = al.at[:, -1, :].set(r_coil[:, 0, :] - r_coil[:, -1, :])
+        return np.sum(np.linalg.norm(al, axis=-1)) / (self.nc), al
 
     def distance_cc(self):  ### 暂未考虑finite-build
         rc = self.r_coil[:, :, 0, 0, :]
@@ -160,9 +161,40 @@ class LossFunction:
         dcs_min = np.min(dr)
         return dcs_min
 
-    def HTS_stress(self, ):
+##  HTS应变量
+    def HTS_strain_bend(self, ):
+        """弯曲应变,
+        Args:
+            w, 带材宽度
+            v1,有限截面坐标轴
+            curvature, 线圈曲率
 
-        pass
+        Returns:
+            bend, 弯曲应变
+
+        """
+
+        bend = w/2*abs(-v1 * curvature)
+        return bend
+
+    def HTS_strain_tor(self, deltal):
+        """扭转应变,
+        Args:
+            w, 带材宽度
+            v1,有限截面坐标轴
+            deltal, 线圈点间隔
+
+        Returns:
+            bend, 弯曲应变
+
+        """
+
+        dv = v1[:, :-1, :] * v1[:, 1:, :]
+        dv = dv + v1[:, -1, :] * v1[:, 0, :]
+        dtheta = np.arccos(dv)
+        tor = w**2/12*(dtheta/deltal)**2
+        return tor
+
 
 
     def symmetry_B(self, B):
@@ -174,6 +206,12 @@ class LossFunction:
             B_total = B_total.at[:, :, :].add(np.dot(B, T))
         
         return B_total
+
+
+
+
+
+
 
 
 

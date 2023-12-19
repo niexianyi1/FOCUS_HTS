@@ -2,21 +2,30 @@ import json
 # import numpy as np
 
 args = {
-    # 优化器参数
-    'n': 1000,            # int, "--number_iter"
-                        # 优化器迭代次数
+
+# 优化器参数
+    #迭代方式
+    'n': 1000,            # int, "--number_iter"，（for循环）
+                        # 优化器迭代次数,若为0，则不迭代。
+    'obj':0,            # float,"--objective_value"，（while循环）
+                        # function目标量，若为0，不考虑此项
+    # 迭代步长
     'lr': 1e-4,       # float, "--learning_rate_c"
                         # 参数c 迭代步长
     'lrfr': 1.0,        # float, "--learning_rate_fr"
                         # 参数fr 迭代步长
+    # 优化算法参数
     'opt': 'momentum',  # str, "--optimizer"
                         # "Name of optimizer. Either SGD, GD (same), Momentum, or Adam"
     'mom': 0.9,         # float, "--momentum_mass"
                         # Momentum mass parameter.
     'res': 10,          # int, "--axis_resolution"
                         # Resolution of the axis, multiplies NZ.
+    'var':0.999,
 
-    # 线圈参数
+    'eps':1e-8,
+    
+# 线圈参数
     'nc': 50,       # int, "--number_coils"
                     # 线圈总数
     'nfp': 5,       # int, "--number_field_periods"
@@ -27,14 +36,16 @@ args = {
                     # 独立线圈数
     'ns': 64,       # int, "--number_segments"
                     # 每个线圈分段数
+    # Fourier表示
     'nfc':6,        # int, "--num_fourier_coils"
                     # 表示线圈的fourier分量数
+    # Bspline表示
     'ncp': 67,      # int, "--number_contral_points"
                     # 每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合
     'k': 3,         # int, "--spline_order"
                     # spline阶数,默认为3阶
 
-    # 有限截面参数
+# 有限截面参数
     'ln': 0.015,    # float, "--length_normal"
                     # 有限截面下每个线圈的法向间隔的长度
     'lb': 0.015,    # float, "--length_binormal"
@@ -46,12 +57,13 @@ args = {
     
     'rc': 1.0,      # float,"--radius_coil"
                     # 线圈半径
+    # alpha角参数
     'nr': 0,        # int,  "--number_rotate"
-                    # 有限截面下每个线圈的旋转数
+                    # 有限截面下每个线圈的初始旋转角，一般为0
     'nfr': 0,       # int, "--number_fourier_rotate"
-                    # 每个线圈的旋转的傅里叶分量的个数
+                    # 每个线圈的旋转的傅里叶分量的个数，为0则不考虑旋转
    
-    # 磁面参数
+# 磁面参数
     'nt': 20,       # int, "--number_theta" 
                     # 磁面上\theta(极向)的网格点数
     'nz': 150,      # int, "--number_zeta"
@@ -59,7 +71,7 @@ args = {
     'rs': 0.5,      # float, "--radius_surface"
                     # 磁面的半径
  
-    # loss function 权重参数
+# loss function 权重参数
     'wb': 1,        # float, "--weight_Bnormal"
                     # 法向磁场分量 权重
     'wl': 0,      # float, "--weight_length"
@@ -78,13 +90,16 @@ args = {
                     # 线圈与磁面距离 
 
     
-    # 画图参数
+# 画图参数
+    # 画线圈
     'nps': 500,      # int, "--number_points"
                     # 画线圈时的散点数
     'init': False,  # bool, "--initial"
                     # 是否画初始线圈和优化线圈的对比图
+    # 画迭代曲线
     'log': False,   # bool, "--log10(lossvals)"
                     # 是否画损失函数值的对数图  
+    # 画poincare图
     'r0': [5.8],      # list, 
                     # 画poincare图时的起点径向坐标
     'z0': [0.2],      # list,
@@ -98,18 +113,18 @@ args = {
     'poincare_save': 'None',    # str,
                                 # 输出poincare图坐标数据文件名, None不输出
 
-    # 文件
+# 文件相关
+    # 初始线圈文件
     'init_option': 'init_coil',
     # str, 初始线圈参数的来源, 'init_c' or 'init_coil'
-
     'init_coil': '/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil_5.npy',       
     # str, makegird 类型, 初始线圈文件名
     'file_type': 'npy',
     # str, 初始线圈文件类型, 'npy' or 'makegrid'， 后续可以再加
-
     'init_c': '/home/nxy/codes/focusadd-spline/results/circle/c_a0.npy',
     # str, 初始参数c文件名 ， c应为[nc, 3, ns] 或[nc/nfp, 3, ns] 或为ns+3
 
+    # 磁面文件
     'surface_r': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy',
     'surface_nn': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy',
     'surface_sg': '/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_sg_surf.npy',
@@ -118,6 +133,7 @@ args = {
     'axis_file': 'None',        
     # str,  "Name of axis file"
 
+    # 输出文件
     'out_hdf5': '/home/nxy/codes/focusadd-spline/results/circle/out_hdf5_1000',        
     # str, 输出线圈参数文件名
 

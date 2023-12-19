@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as np
 from jax import jit, vmap
 from jax.config import config
