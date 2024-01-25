@@ -14,7 +14,7 @@ import time
 config.update("jax_enable_x64", True)
 
 
-with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -57,12 +57,12 @@ def average_length(r_coil):      #new
     len = np.sum(np.linalg.norm(al, axis=-1))
     return len
 
-rc = np.load("/home/nxy/codes/focusadd-spline/initfiles/w7x/circle_coil.npy")
+rc = np.load("/home/nxy/codes/coil_spline_HTS/initfiles/w7x/circle_coil.npy")
 c, bc  = bspline.prep(rc, 10, rc.shape[1], 3)
 ### 磁场项
-nn = np.load('/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_nn_surf.npy')
-sg = np.load('/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_sg_surf.npy')
-r_surf = np.load('/home/nxy/codes/focusadd-spline/initfiles/w7x/highres_r_surf.npy')
+nn = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_nn_surf.npy')
+sg = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_sg_surf.npy')
+r_surf = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_r_surf.npy')
 dB = np.zeros((10, 3, c.shape[2]))
 
 d = 1e-4
@@ -77,7 +77,7 @@ def db(c):
     dl = symmetry(der1)[:, :-1, np.newaxis, np.newaxis, :] / ns
     B = quadratic_flux(nn, sg, r_coil, r_surf, dl)
     return B
-gbc = np.load("/home/nxy/codes/focusadd-spline/gc.npy")
+gbc = np.load("/home/nxy/codes/coil_spline_HTS/gc.npy")
 
 
 # len0 = length(c)

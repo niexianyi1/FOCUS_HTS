@@ -12,7 +12,6 @@ def poincare(r0, z0, bc, c):
     lenr = len(r0)
     
     rc = vmap(lambda c :bspline.splev(bc, c), in_axes=0, out_axes=0)(c)
-    print(rc.shape)
     rc = symmetry(rc[:, :-1, :])  
     x = rc[:, :, 0]   
     y = rc[:, :, 1]
@@ -119,5 +118,5 @@ def symmetry(r):
 # r0 = [ 5.9]
 # z0 = [ 0]
 bc = bspline.get_bc_init(67)
-# c = np.load('/home/nxy/codes/focusadd-spline/results/circle/c_100b.npy')
+# c = np.load('/home/nxy/codes/coil_spline_HTS/results/circle/c_100b.npy')
 # poincare(r0, z0, bc, c)

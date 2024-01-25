@@ -12,7 +12,7 @@ config.update('jax_disable_jit', True)
 
 if __name__ == "__main__":
 
-    with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
+    with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
     
@@ -76,9 +76,9 @@ if __name__ == "__main__":
         print('j = ', j)
         args['nfr'] = 2+j      
 
-        args['out_loss'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/loss_nfr{}.npy'.format(j+2)
-        args['out_fc'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fc_nfr{}.npy'.format(j+2)
-        args['out_fr'] = '/home/nxy/codes/focusadd-spline/results_f/circle/loss/fr_nfr{}.npy'.format(j+2)
+        args['out_loss'] = '/home/nxy/codes/coil_spline_HTS/results_f/circle/loss/loss_nfr{}.npy'.format(j+2)
+        args['out_fc'] = '/home/nxy/codes/coil_spline_HTS/results_f/circle/loss/fc_nfr{}.npy'.format(j+2)
+        args['out_fr'] = '/home/nxy/codes/coil_spline_HTS/results_f/circle/loss/fr_nfr{}.npy'.format(j+2)
         loss_vals = []
         lossfunc = LossFunction(args, surface_data, B_extern)
         gradient, loss_val = update(0, opt_state_fc, opt_state_fr, lossfunc)

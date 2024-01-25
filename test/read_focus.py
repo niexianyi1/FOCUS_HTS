@@ -32,6 +32,6 @@ def read_focus(filename):      # 处理一下
                 c = c.at[i, s, :].set(c0)       
     return c, t
 
-c, t = read_focus('/home/nxy/codes/focusadd-spline/ellipse.focus')
-np.save('/home/nxy/codes/focusadd-spline/coil_c.npy', c)
-np.save('/home/nxy/codes/focusadd-spline/coil_t.npy', t)
+c, t = read_focus('/home/nxy/codes/coil_spline_HTS/ellipse.focus')
+np.save('/home/nxy/codes/coil_spline_HTS/coil_c.npy', c)
+np.save('/home/nxy/codes/coil_spline_HTS/coil_t.npy', t)

@@ -47,15 +47,19 @@ class CoilSet:
             r       :   array, [nc, ns, nn, nb, 3], 有限截面线圈坐标
             der1, der2, der3 : array, [nc, ns, 3], 中心点线圈各阶导数值
         """
-        coil_arg, fr = params   
-        I_new = self.args['I'] / (self.nn * self.nb)
+        coil_arg, fr, I = params   
+        I_new = I / (self.nn * self.nb)
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, der3 = CoilSet.compute_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
-        v1, v2 = CoilSet.compute_frame(self, fr, normal, binormal)
-        r = CoilSet.compute_r(self, fr, normal, binormal, coil_centroid)
-        frame = tangent, normal, binormal
-        dl = CoilSet.compute_dl(self, params, frame, der1, der2, coil_centroid)
+        centroid_frame = tangent, normal, binormal
+        dTdt, dNdt, dBdt = CoilSet.compute_com_deriv(self, centroid_frame, der1, der2, coil_centroid)
+        alpha = CoilSet.compute_alpha(self, fr)
+        alpha1 = CoilSet.compute_alpha_1(self, fr)
+        v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
+        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, alpha, alpha1, centroid_frame, dNdt, dBdt)
+        r = CoilSet.compute_r(self, v1, v2, coil_centroid)
+        dl = CoilSet.compute_dl(self, dv1_dt, dv2_dt, der1)
         if self.ss == 1 :
             r = CoilSet.stellarator_symmetry_coil(self, r)
             dl = CoilSet.stellarator_symmetry_coil(self, dl)
@@ -63,8 +67,28 @@ class CoilSet:
         r = CoilSet.symmetry_coil(self, r)
         dl = CoilSet.symmetry_coil(self, dl)
         I_new = CoilSet.symmetry_I(self, I_new)
-        I_new = CoilSet.finite_build_I(self, I_new)
-        return I_new, dl, r, der1, der2, der3, v1
+
+        return I_new, dl, r, der1, der2, der3, v1, v2, tangent, binormal
+
+
+    def local_arg_c(self, coil_arg):
+        a = self.args['optimize_location_ns']
+        loc = self.args['optimize_location_nic']
+        lo_nc = len(loc) 
+        coil_arg_c = self.args['c_init']
+        for i in range(lo_nc):
+            lenai = len(a[i])
+            for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
+                start = int(a[i][j][0])
+                end = int(a[i][j][1])
+                if end <= self.ns-3:
+                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end+3].set[coil_arg[i][j]]
+                elif end > self.ns-3:
+                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:-3].set(coil_arg[i][j])
+        
+        return coil_arg_c
+                
+
 
     def compute_coil_centroid(self, coil_arg):    
         """
@@ -80,10 +104,19 @@ class CoilSet:
         if self.args['coil_case'] == 'fourier':        
             coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns, self.theta)
             coil_centroid = coil_centroid[:, :-1, :]
-        if self.args['coil_case'] == 'spline':
+        
+        elif self.args['coil_case'] == 'spline':
             t, u, k = self.args['bc']
-            coil_centroid = vmap(lambda c :spline.splev(t, u, coil_arg, self.args['tj'], self.ns), 
-                    in_axes=0, out_axes=0)(coil_arg)
+            if self.args['local_optimize'] == 0:
+                coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))
+                coil_arg_c = coil_arg_c.at[:, :, :-3].set(coil_arg)
+                coil_arg_c = coil_arg_c.at[:, :, -3:].set(coil_arg[:, :, :3])
+            
+            elif self.args['local_optimize'] == 1:
+                coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
+
+            coil_centroid = vmap(lambda coil_arg_c :spline.splev(t, u, coil_arg_c, self.args['tj'], self.ns), 
+                    in_axes=0, out_axes=0)(coil_arg_c)
         
         return coil_centroid
 
@@ -103,13 +136,22 @@ class CoilSet:
             der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns, self.theta)
             der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns, self.theta)
             der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
-        if self.args['coil_case'] == 'spline':
+        
+        elif self.args['coil_case'] == 'spline':
             t, u, k = self.args['bc']
-            der1, wrk1 = vmap(lambda coil_arg :spline.splev(t, u, coil_arg, self.args['tj'], self.ns), 
-                    in_axes=0, out_axes=0)(coil_arg)
-            der2 = vmap(lambda wrk1 :spline.splev(t, u, wrk1, self.args['tj'], self.ns), 
-                    in_axes=0, out_axes=0)(wrk1)
+            if self.args['local_optimize'] == 0:
+                coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))
+                coil_arg_c = coil_arg_c.at[:, :, :-3].set(coil_arg)
+                coil_arg_c = coil_arg_c.at[:, :, -3:].set(coil_arg[:, :, :3])
+            
+            elif self.args['local_optimize'] == 1:
+                coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
 
+            der1, wrk1 = vmap(lambda coil_arg_c :spline.der1_splev(t, u, coil_arg_c, self.args['tj'], self.ns), 
+                    in_axes=0, out_axes=0)(coil_arg_c)
+            der2 = vmap(lambda wrk1 :spline.der2_splev(t, u, wrk1, self.args['tj'], self.ns), 
+                    in_axes=0, out_axes=0)(wrk1)
+            der3 = 0
         return der1, der2, der3
         
     def compute_com(self, der1, coil_centroid):    
@@ -233,27 +275,22 @@ class CoilSet:
             )
         return alpha_1[:, :-1]
 
-    def compute_frame(self, fr, N, B):  
+    def compute_frame(self, alpha, frame):  
         """
 		Computes the vectors v1 and v2 for each coil. v1 and v2 are rotated relative to
 		the normal and binormal frame by an amount alpha. Alpha is parametrized by a Fourier series.
 		"""
-        alpha = CoilSet.compute_alpha(self, fr)
+        _, N, B = frame
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
         v1 = calpha[:, :, np.newaxis] * N - salpha[:, :, np.newaxis] * B
         v2 = salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
         return v1, v2
 
-    def compute_frame_derivative(self, params, frame, der1, der2, coil_centroid): 
-
+    def compute_frame_derivative(self, alpha, alpha1, frame, dNdt, dBdt): 
         _, N, B = frame
-        _, fr = params
-        alpha = CoilSet.compute_alpha(self, fr)
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
-        alpha1 = CoilSet.compute_alpha_1(self, fr)
-        _, dNdt, dBdt = CoilSet.compute_com_deriv(self, frame, der1, der2, coil_centroid)
         dv1_dt = (
             calpha[:, :, np.newaxis] * dNdt
             - salpha[:, :, np.newaxis] * dBdt
@@ -268,7 +305,7 @@ class CoilSet:
         )
         return dv1_dt, dv2_dt
 
-    def compute_r(self, fr, normal, binormal, coil_centroid):      
+    def compute_r(self, v1, v2, coil_centroid):      
         """
         Computes the position of the multi-filament coils.
 
@@ -278,24 +315,22 @@ class CoilSet:
 
         """
 
-        v1, v2 = CoilSet.compute_frame(self, fr, normal, binormal)
-        r = np.zeros((self.nic, self.ns, self.nn, self.nb, 3))
-        r += coil_centroid[:, :, np.newaxis, np.newaxis, :]
+        r = np.zeros((self.nic, self.nn, self.nb, self.ns, 3))
+        r += coil_centroid[:, np.newaxis, np.newaxis, :, :]
         for n in range(self.nn):
             for b in range(self.nb):
-                r = r.at[:, :, n, b, :].add(
+                r = r.at[:, n, b, :, :].add(
                     (n - 0.5 * (self.nn - 1)) * self.ln * v1 + 
                     (b - 0.5 * (self.nb - 1)) * self.lb * v2
                 ) 
         return r
 
-    def compute_dl(self, params, frame, der1, der2, coil_centroid):   
-        dl = np.zeros((self.nic, self.ns, self.nn, self.nb, 3))
-        dl += der1[:, :, np.newaxis, np.newaxis, :]
-        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, params, frame, der1, der2, coil_centroid)
+    def compute_dl(self, dv1_dt, dv2_dt, der1):   
+        dl = np.zeros((self.nic, self.nn, self.nb, self.ns, 3))
+        dl += der1[:, np.newaxis, np.newaxis, :, :]
         for n in range(self.nn):
             for b in range(self.nb):
-                dl = dl.at[:, :, n, b, :].add(
+                dl = dl.at[:, n, b, :, :].add(
                     (n - 0.5 * (self.nn - 1)) * self.ln * dv1_dt + 
                     (b - 0.5 * (self.nb - 1)) * self.lb * dv2_dt
                 )
@@ -305,7 +340,7 @@ class CoilSet:
 
     def stellarator_symmetry_coil(self, r):
         """计算线圈的仿星器对称"""
-        rc = np.zeros((self.nic*2, self.ns, self.nn, self.nb, 3))
+        rc = np.zeros((self.nic*2, self.nn, self.nb, self.ns, 3))
         rc = rc.at[0:self.nic, :, :, :, :].set(r)
         T = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
         rc = rc.at[self.nic:self.nic*2, :, :, :, :].set(np.dot(r, T))
@@ -314,7 +349,7 @@ class CoilSet:
     def symmetry_coil(self, r):
         """计算线圈的周期对称"""
         npc = int(self.nc / self.nfp)   # 每周期线圈数，number of coils per period
-        rc_total = np.zeros((self.nc, self.ns, self.nn, self.nb, 3))
+        rc_total = np.zeros((self.nc, self.nn, self.nb, self.ns, 3))
         rc_total = rc_total.at[0:npc, :, :, :, :].set(r)
         for i in range(self.nfp - 1):        
             theta_t = 2 * pi * (i + 1) / self.nfp
@@ -329,8 +364,8 @@ class CoilSet:
         I_new = np.zeros(self.nic*2)
         I_new = I_new.at[:self.nic].set(I)
         for i in range(self.nic):
+            # I_new = I_new.at[i+self.nic].set(-I[i])
             I_new = I_new.at[i+self.nic].set(-I[i])
-
         return I_new
 
     def symmetry_I(self, I):
@@ -341,47 +376,60 @@ class CoilSet:
             I_new = I_new.at[npc*i:npc*(i+1)].set(I)
         return I_new
 
-    def finite_build_I(self, I):
-        """计算电流的有限截面数据"""
-        I_new = np.zeros((self.nc * self.nn * self.nb))
-        for i in range(self.nc):
-            I_new = I_new.at[i*self.nn * self.nb:(i+1)*self.nn * self.nb].set(I[i])
-        return I_new
 
     def get_coil(self, params):
-        _,_,coil,_,_,_ = CoilSet.coilset(self, params)
+        _,_,coil,_,_,_,_,_,_,_ = CoilSet.cal_coil(self, params)
         return coil
 
     def end_coil(self, params):
         """迭代结束后的输出, 通过字典将相关量整合"""
         coil_arg, fr = params   
-        I_new = self.args['I'] / (self.nn * self.nb)
-        coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  # [nc, ns+1, 3]
-        der1, der2, der3 = CoilSet.compute_der(self, coil_arg)   # [nc, ns+1, 3]
+        I_new = self.I / (self.nn * self.nb)
+        coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
+        der1, der2, der3 = CoilSet.compute_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
-        r = CoilSet.compute_r(self, fr, normal, binormal, coil_centroid)
-        frame = tangent, normal, binormal
-        dl = CoilSet.compute_dl(self, params, frame, der1, der2, coil_centroid)
+        centroid_frame = tangent, normal, binormal
+        dTdt, dNdt, dBdt = CoilSet.compute_com_deriv(self, centroid_frame, der1, der2, coil_centroid)
+        alpha = CoilSet.compute_alpha(self, fr)
+        alpha1 = CoilSet.compute_alpha_1(self, fr)
+        v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
+        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, alpha, alpha1, centroid_frame, dNdt, dBdt)
+        r = CoilSet.compute_r(self, v1, v2, coil_centroid)
+        dl = CoilSet.compute_dl(self, dv1_dt, dv2_dt, der1)
         if self.ss == 1 :
             r = CoilSet.stellarator_symmetry_coil(self, r)
             dl = CoilSet.stellarator_symmetry_coil(self, dl)
             I_new = CoilSet.stellarator_symmetry_I(self, I_new)
         r = CoilSet.symmetry_coil(self, r)
         dl = CoilSet.symmetry_coil(self, dl)
-        I_new = CoilSet.symmetry_I(self, I_new)
-        I_new = CoilSet.finite_build_I(self, I_new)
+        I_new = CoilSet.symmetry_I(self, I_new) 
+        
+        if self.args['coil_case'] == 'spline':
+            if self.args['local_optimize'] == 0:
+                coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))
+                coil_arg_c = coil_arg_c.at[:, :, :-3].set(coil_arg)
+                coil_arg_c = coil_arg_c.at[:, :, -3:].set(coil_arg[:, :, :3])
+                
+            elif self.args['local_optimize'] == 1:
+                coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
+            coil_arg = coil_arg_c
+
         coil_all = {
-            'coil_centroid' :   coil_centroid,
-            'der1'          :   der1,
-            'der2'          :   der2,
-            'der3'          :   der3,
-            'tangent'       :   tangent,
-            'normal'        :   normal,
-            'binormal'      :   binormal,
-            'params'        :   params,
-            'I_new'         :   I_new,
-            'r'             :   r,
-            'dl'            :   dl
+            'coil_centroid'     :   coil_centroid,
+            'coil_der1'         :   der1,
+            'coil_der2'         :   der2,
+            'coil_der3'         :   der3,
+            'coil_tangent'      :   tangent,
+            'coil_normal'       :   normal,
+            'coil_binormal'     :   binormal,
+            'coil_v1'           :   v1,
+            'coil_v2'           :   v2,
+            'coil_arg'          :   coil_arg,
+            'coil_fr'           :   fr,
+            'coil_alpha'        :   alpha,
+            'coil_I_new'        :   I_new,
+            'coil_r'            :   r,
+            'coil_dl'           :   dl
         }
         return coil_all
 

@@ -13,7 +13,7 @@ import scipy.interpolate as si
 config.update("jax_enable_x64", True)
 
 
-with open('/home/nxy/codes/focusadd-spline/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -336,7 +336,7 @@ r_surf = np.load(args['surface_r'])[0,:,:]
 # for i in range(20):
 #     B0 = B0.at[i,2].set(1/2/(1+z[i])**1.5*np.sqrt(1+z[i]**2))
 
-c = np.load('/home/nxy/codes/focusadd-spline/results/circle/c_100b.npy')
+c = np.load('/home/nxy/codes/coil_spline_HTS/results/circle/c_100b.npy')
 fr = np.zeros((2, 10, args['nfr'])) 
 params = c, fr
 bc = bspline.get_bc_init(args['ns']+3)

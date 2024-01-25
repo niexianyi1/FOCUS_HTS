@@ -7,7 +7,7 @@ import jax.numpy as np
 import jax.example_libraries.optimizers as op
 import fourier
 import spline
-import surface
+from read_plasma import plasma_surface
 
 
 def init(args):
@@ -25,11 +25,11 @@ def init(args):
         # B_extern :    额外磁场, 一般为背景磁场
     """
     args, coil_arg_init, fr_init = coil_init(args)    # coil_arg：线圈参数, Fourier或spline表示
-    args = init_I(args)
+    I_init = init_I(args)
     surface_data = get_surface_data(args)
     # B_extern = get_B_extern(args)
 
-    return args, coil_arg_init, fr_init, surface_data
+    return args, coil_arg_init, fr_init, surface_data, I_init
 
 
 def args_to_op(args, optimizer, lr):
@@ -71,8 +71,8 @@ def get_surface_data(args):           # surface data的获取
         nn = np.load(args['surface_nn_file'])
         sg = np.load(args['surface_sg_file'])
     elif args['surface_case'] == 1 :
-        pass  # 在surface中计算
-
+        r, nn, sg = plasma_surface(args)
+        
     surface_data = (r, nn, sg)
     return surface_data
 
@@ -87,7 +87,7 @@ def coil_init(args):
         args :          dict,  新的参数总集, 添加对应表达式的非优化参数
         coil_arg_init : array, 线圈的初始优化参数
             fc_init :   array, [6, nic, nfc], fourier表示的初始参数
-            c_init :    array, [nic, ncp], spline表示的初始参数
+            c_init :    array, [nic, ncp-3], spline表示的初始参数, 不包含重复的控制点。
         fr_init :       array, [2, nic, nfr], 有限截面旋转的初始数据
     """    
     assert args['number_independent_coils'] == int(args['number_coils'] / 
@@ -97,35 +97,66 @@ def coil_init(args):
     ns = args['number_segments']
     
     ## 有限截面旋转角
-    fr_init = np.zeros((2, nic, args['number_fourier_rotate'])) 
-
-    ## 输入文件为Fourier参数
-    if args['init_coil_option'] == 'fourier':
-        fc_init = np.load("{}".format(args['init_coil_file']))
-
-    ## 输入文件为spline参数
-    if args['init_coil_option'] == 'spline':
-        c_init = np.load("{}".format(args['init_coil_file']))
-        assert args['number_control_points'] == c_init.shape[1]
-        bc, tj = spline.get_bc_init(ns, args['number_control_points'])
-
-    ## 输入文件为线圈坐标
-    if args['init_coil_option'] == 'coil':
-        if args['file_type'] == 'npy':
-            coil = np.load("{}".format(args['init_coil_file']))
-        if args['file_type'] == 'makegrid':
-            coil = read_makegrid(args['init_coil_file'], nic, ns)
-        fc_init = fourier.compute_coil_fourierSeries(nic, ns, args['num_fourier_coils'], coil)
-        c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
+    if args['init_fr_case'] == 0:
+        fr_init = np.zeros((2, nic, args['number_fourier_rotate'])) 
+    elif args['init_fr_case'] == 1:
+        fr_init = np.load("{}".format(args['init_fr_file']))
 
     ## 总变量
     if args['coil_case'] == 'fourier':
+        if args['init_coil_option'] == 'fourier':
+            fc_init = np.load("{}".format(args['init_coil_file']))
+
+        elif args['init_coil_option'] == 'coil':
+            if args['file_type'] == 'npy':
+                coil = np.load("{}".format(args['init_coil_file']))
+            if args['file_type'] == 'makegrid':
+                coil = read_makegrid(args['init_coil_file'], nic, ns)
+            fc_init = fourier.compute_coil_fourierSeries(nic, ns, args['num_fourier_coils'], coil)
+        
         coil_arg_init = fc_init
         return args, coil_arg_init, fr_init
-    if args['coil_case'] == 'spline':
+
+    elif args['coil_case'] == 'spline':
+        if args['init_coil_option'] == 'spline':
+            c_init = np.load("{}".format(args['init_coil_file']))
+            assert args['number_control_points'] == c_init.shape[2]
+            bc, tj = spline.get_bc_init(ns, args['number_control_points'])
+
+        elif args['init_coil_option'] == 'coil':
+            if args['file_type'] == 'npy':
+                coil = np.load("{}".format(args['init_coil_file']))
+            if args['file_type'] == 'makegrid':
+                coil = read_makegrid(args['init_coil_file'], nic, ns)           
+            c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
+        
         args['bc'] = bc
         args['tj'] = tj
-        coil_arg_init = c_init
+
+        if args['local_optimize'] !=0:
+            a = args['optimize_location_ns']
+            loc = args['optimize_location_nic']
+            lo_nc = len(loc) 
+            assert lo_nc <= nic
+            assert lo_nc == len(a)
+            coil_arg_init = []
+            for i in range(lo_nc):
+                lenai = len(a[i])
+                coil_args = []
+                for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
+                    start = int(a[i][j][0])
+                    end = int(a[i][j][1])
+                    if end <= ns-3:
+                        coil_arg = [c_init[int(loc[i]), :, start:end+3]]
+                    elif end > ns-3:
+                        coil_arg = [c_init[int(loc[i]), :, start:-3]]
+                    coil_args.append(coil_arg)
+                coil_arg_init.append(coil_args)
+                   
+            args['c_init'] = c_init
+ 
+        else:
+            coil_arg_init = c_init[:, :, :-3]
         return args, coil_arg_init, fr_init
 
 
@@ -141,14 +172,18 @@ def init_I(args):
     """    
     nic = args['number_independent_coils']
     current_I = args['current_I']
+    I = np.zeros(nic)
     if args['current_independent'] == 0:
-        I = np.ones(nic) * current_I[0]
-    if args['current_independent'] == 1:
-        I = np.zeros(nic)
+        I = I.at[:].set(current_I[0])
+    elif args['current_independent'] == 1:
         for i in range(nic):
             I = I.at[i].set(current_I[i])
-    args['I'] = I
-    return args
+    if args['I_optimize'] == 0:
+        args['learning_rate_I'] = 0
+    else:
+        assert args['learning_rate_I'] != 0
+
+    return I
 
 
 def get_B_extern(args):
@@ -160,7 +195,6 @@ def get_B_extern(args):
 def read_hdf5(filename):
     f = h5py.File(filename, "r")
     arge = {}
-    print(f.keys())
     for key in list(f.keys()):
         arge.update({key: f[key][:]})
     f.close()
