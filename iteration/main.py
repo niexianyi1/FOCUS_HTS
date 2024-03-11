@@ -3,7 +3,6 @@
 
 import jax.numpy as np
 from jax import value_and_grad, jit
-import jax.example_libraries.optimizers as op
 from jax.config import config
 from scipy.optimize import minimize
 import json
@@ -17,7 +16,7 @@ config.update("jax_enable_x64", True)
 config.update('jax_disable_jit', True)
 
 def main():
-    start = time.time()
+    
     with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
@@ -36,19 +35,20 @@ def main():
 
     # loss计算准备
 
-    coil_cal = CoilSet(args)
-    coil_output_func = coil_cal.cal_coil    
-
+    # coil_cal = CoilSet(args)
+    # args = coil_cal.get_fb_args(params)  
 
     loss_vals = []
     # 两种迭代函数
     @jit
-    def update(opt_state_coil_arg, opt_state_fr, opt_state_I):
+    def update(args, opt_state_coil_arg, opt_state_fr, opt_state_I):
         """
         迭代过程, 通过value_and_grad得到导数值和loss值, 
-        """
+        """   
         params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
                     get_params_I(opt_state_I))
+        coil_cal = CoilSet(args)
+        coil_output_func = coil_cal.cal_coil   
         loss_val, gradient = value_and_grad(
             lambda params :lossfunction.loss(args, coil_output_func, params, surface_data),
             allow_int = True)(params)      
@@ -59,50 +59,51 @@ def main():
         return opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val
 
     @jit
-    def f_and_df(params):
-        params = scipy_to_params(params)                 
+    def f_and_df(params, args):
+        params = scipy_to_params(params)   
+        coil_cal = CoilSet(args)
+        coil_output_func = coil_cal.cal_coil           
+
         loss_val, gradient = value_and_grad(
             lambda params :lossfunction.loss(args, coil_output_func, params, surface_data),
             allow_int = True)(params)    
-        if args['I_optimize'] == 0:
-            g_I = gradient[2]
-            g_I = g_I.at[:].set(0)
-            g = np.append(np.append(gradient[0], gradient[1]), g_I)
-        else:
-            g = np.append(np.append(gradient[0], gradient[1]), gradient[2])
+        g = np.append(np.append(gradient[0], gradient[1]), gradient[2])
         loss_vals.append(loss_val)
         print(loss_val)
         return loss_val, g
 
     def scipy_to_params(params):
         nic = args['number_independent_coils']
-        fr = np.reshape(params[-2 * nic * args['number_fourier_rotate']:-nic],
+        fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] - nic:-nic],
                             (2, nic, args['number_fourier_rotate']))   
         I = params[-nic:]
-        if args['coil_case'] == 'fourier':
-            coil_arg = np.reshape(params[:6 * nic * args['num_fourier_coils']], 
+        def coil_arg_fourier(args, params, nic):
+            return np.reshape(params[:6 * nic * args['num_fourier_coils']], 
                                 (6, nic, args['num_fourier_coils']) )
-            
-        elif args['coil_case'] == 'spline':
-            coil_arg = np.reshape(params[:nic * 3 * (args['number_control_points']-3)], 
-                                (nic, 3, (args['number_control_points']-3)) )  
-        
+        def coil_arg_spline(args, params, nic):
+            return np.reshape(params[:nic * 3 * (args['number_control_points']-3)], 
+                                (nic, 3, (args['number_control_points']-3)) )
+        compute_coil_arg = dict()
+        compute_coil_arg['fourier'] = coil_arg_fourier
+        compute_coil_arg['spline'] = coil_arg_spline
+        compute_func = compute_coil_arg[args['coil_case']]
+        coil_arg = compute_func(args, params, nic)
         params = (coil_arg, fr, I)  
         return params
 
 
     # 迭代循环, 得到导数, 带入变量, 得到新变量
     # 分两种情况, 固定迭代次数、给定迭代目标残差
-
+    start = time.time()
 
     if args['iter_method'] == 'for':
         opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
         opt_state_fr = opt_init_fr(fr_init)  
         opt_state_I = opt_init_I(I_init)  
         for i in range(args['number_iteration']):
-            print('i = ', i)
+            print('iter = ', i)
             opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = update(
-                opt_state_coil_arg, opt_state_fr, opt_state_I)
+                args, opt_state_coil_arg, opt_state_fr, opt_state_I)
             loss_vals.append(loss_val)
             print(loss_val)
         params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
@@ -111,7 +112,7 @@ def main():
     elif args['iter_method'] == 'min':
 
         params = np.append(np.append(coil_arg_init, fr_init), I_init)
-        res = minimize(f_and_df, params, jac=True, 
+        res = minimize(lambda params :f_and_df(params, args), params, jac=True, 
                 method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
         success, loss_val, params, n = res.success, res.fun, res.x, res.nit
         print(success, 'n = ', n, 'loss = ', loss_val)  
@@ -122,16 +123,16 @@ def main():
         opt_state_fr = opt_init_fr(fr_init)  
         opt_state_I = opt_init_I(I_init)  
         for i in range(args['number_iteration']):
-            print('i = ', i)
-            opt_state_coil_arg, opt_state_fr, loss_val = update(
-                opt_state_coil_arg, opt_state_fr)
+            print('iter = ', i)
+            opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = update(
+                args, opt_state_coil_arg, opt_state_fr, opt_state_I)
             loss_vals.append(loss_val)
             print(loss_val)
         coil_arg = get_params_coil_arg(opt_state_coil_arg)
         fr = get_params_fr(opt_state_fr)
         I = get_params_I(opt_state_I)
         params = np.append(np.append(coil_arg, fr), I)
-        res = minimize(f_and_df, params, jac=True, 
+        res = minimize(lambda params :f_and_df(params, args), params, jac=True, 
                 method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
         success, loss_val, params, n = res.success, res.fun, res.x, res.nit
         print(success, 'n = ', n, 'loss = ', loss_val)   
@@ -139,7 +140,7 @@ def main():
 
     elif args['iter_method'] == 'min-for':
         params = np.append(np.append(coil_arg_init, fr_init), I_init)
-        res = minimize(f_and_df, params, jac=True, 
+        res = minimize(lambda params :f_and_df(params, args), params, jac=True, 
                 method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
         success, loss_val, params, n = res.success, res.fun, res.x, res.nit
         print(success, 'n = ', n, 'loss = ', loss_val)  
@@ -149,22 +150,26 @@ def main():
         opt_state_fr = opt_init_fr(fr) 
         opt_state_I = opt_init_I(I) 
         for i in range(args['number_iteration']):
-            print('i = ', i)
+            print('iter = ', i)
             opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = update(
-                opt_state_coil_arg, opt_state_fr, opt_state_I)
+                args, opt_state_coil_arg, opt_state_fr, opt_state_I)
             loss_vals.append(loss_val)
             print(loss_val)
         params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
                     get_params_I(opt_state_I))
     
 
+
+
     end = time.time()
     print('time cost = ', end - start)
-
+     
     # 得到优化后的线圈参数, 保存到文件中
+    coil_cal = CoilSet(args)
+    coil_output_func = coil_cal.cal_coil 
     coil_all = coil_cal.end_coil(params)
     loss_end = lossfunction.loss_save(args, coil_output_func, params, surface_data)
     save.save_file(args, loss_vals, coil_all, loss_end, surface_data)
-    plot.plot(args, coil_all, loss_vals, params)
+    plot.plot(args, coil_all, loss_vals, params, surface_data)
     
 

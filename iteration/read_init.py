@@ -2,12 +2,14 @@
 ### 获取初始线圈, 磁面
 ### 包含各种文件类型的读取
 
-import h5py
+
 import jax.numpy as np
 import jax.example_libraries.optimizers as op
 import fourier
 import spline
-from read_plasma import plasma_surface
+import create_circle
+import read_plasma 
+import read_file
 
 
 def init(args):
@@ -24,10 +26,13 @@ def init(args):
         surface_data :  磁面数据
         # B_extern :    额外磁场, 一般为背景磁场
     """
-    args, coil_arg_init, fr_init = coil_init(args)    # coil_arg：线圈参数, Fourier或spline表示
+    
     I_init = init_I(args)
-    surface_data = get_surface_data(args)
-    # B_extern = get_B_extern(args)
+    surface_data, args = get_surface_data(args)
+    args, coil_arg_init, fr_init = coil_init(args, surface_data)    # coil_arg：线圈参数, Fourier或spline表示
+    if args['Bn_extern'] != 0:
+        Bn_extern = get_Bn_extern(args)
+        args['Bn_extern_surface'] = Bn_extern
 
     return args, coil_arg_init, fr_init, surface_data, I_init
 
@@ -51,7 +56,7 @@ def args_to_op(args, optimizer, lr):
     if optimizer == 'momentum':
         return  op.momentum(lr, args['momentum_mass'])
     if optimizer == 'adam':
-        return  op.adam(lr, args['momentum_mass'], args['arg'], args['eps'])
+        return  op.adam(lr, args['momentum_mass'], args['var'], args['eps'])
 
 
 def get_surface_data(args):           # surface data的获取
@@ -71,13 +76,13 @@ def get_surface_data(args):           # surface data的获取
         nn = np.load(args['surface_nn_file'])
         sg = np.load(args['surface_sg_file'])
     elif args['surface_case'] == 1 :
-        r, nn, sg = plasma_surface(args)
+        r, nn, sg, args = read_plasma.plasma_surface(args)
         
     surface_data = (r, nn, sg)
-    return surface_data
+    return surface_data, args
 
 
-def coil_init(args):
+def coil_init(args, surface_data):
     """
     获取线圈初始参数, 按照选择的表示方式给出
     Args:
@@ -95,6 +100,7 @@ def coil_init(args):
     
     nic = args['number_independent_coils']
     ns = args['number_segments']
+    surface, _, _ = surface_data
     
     ## 有限截面旋转角
     if args['init_fr_case'] == 0:
@@ -108,10 +114,14 @@ def coil_init(args):
             fc_init = np.load("{}".format(args['init_coil_file']))
 
         elif args['init_coil_option'] == 'coil':
-            if args['file_type'] == 'npy':
+            if args['coil_file_type'] == 'npy':
                 coil = np.load("{}".format(args['init_coil_file']))
-            if args['file_type'] == 'makegrid':
-                coil = read_makegrid(args['init_coil_file'], nic, ns)
+            if args['coil_file_type'] == 'makegrid':
+                coil = read_file.read_makegrid(args['init_coil_file'], nic, ns)
+            fc_init = fourier.compute_coil_fourierSeries(nic, ns, args['num_fourier_coils'], coil)
+
+        elif args['init_coil_option'] == 'circle':
+            coil = create_circle.circle_coil(args, surface)
             fc_init = fourier.compute_coil_fourierSeries(nic, ns, args['num_fourier_coils'], coil)
         
         coil_arg_init = fc_init
@@ -124,40 +134,60 @@ def coil_init(args):
             bc, tj = spline.get_bc_init(ns, args['number_control_points'])
 
         elif args['init_coil_option'] == 'coil':
-            if args['file_type'] == 'npy':
+            if args['coil_file_type'] == 'npy':
                 coil = np.load("{}".format(args['init_coil_file']))
-            if args['file_type'] == 'makegrid':
-                coil = read_makegrid(args['init_coil_file'], nic, ns)           
+            if args['coil_file_type'] == 'makegrid':
+                coil = read_file.read_makegrid(args['init_coil_file'], nic, ns)           
             c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
-        
+
+        elif args['init_coil_option'] == 'circle':
+            coil = create_circle.circle_coil(args, surface)
+            c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
+
         args['bc'] = bc
         args['tj'] = tj
-
-        if args['local_optimize'] !=0:
-            a = args['optimize_location_ns']
-            loc = args['optimize_location_nic']
-            lo_nc = len(loc) 
-            assert lo_nc <= nic
-            assert lo_nc == len(a)
-            coil_arg_init = []
-            for i in range(lo_nc):
-                lenai = len(a[i])
-                coil_args = []
-                for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
-                    start = int(a[i][j][0])
-                    end = int(a[i][j][1])
-                    if end <= ns-3:
-                        coil_arg = [c_init[int(loc[i]), :, start:end+3]]
-                    elif end > ns-3:
-                        coil_arg = [c_init[int(loc[i]), :, start:-3]]
-                    coil_args.append(coil_arg)
-                coil_arg_init.append(coil_args)
-                   
-            args['c_init'] = c_init
- 
-        else:
-            coil_arg_init = c_init[:, :, :-3]
+        coil_arg_init = c_init[:, :, :-3]
         return args, coil_arg_init, fr_init
+
+    elif args['coil_case'] == 'spline_local':
+        if args['init_coil_option'] == 'spline':
+            c_init = np.load("{}".format(args['init_coil_file']))
+            assert args['number_control_points'] == c_init.shape[2]
+            bc, tj = spline.get_bc_init(ns, args['number_control_points'])
+
+        elif args['init_coil_option'] == 'coil':
+            if args['coil_file_type'] == 'npy':
+                coil = np.load("{}".format(args['init_coil_file']))
+            if args['coil_file_type'] == 'makegrid':
+                coil = read_file.read_makegrid(args['init_coil_file'], nic, ns)           
+            c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
+        args['bc'] = bc
+        args['tj'] = tj
+        coil_arg_init = local_coil(args, c_init, ns, nic)
+        args['c_init'] = c_init
+        return args, coil_arg_init, fr_init
+
+
+def local_coil(args, c_init, ns, nic):
+    a = args['optimize_location_ns']
+    loc = args['optimize_location_nic']
+    lo_nc = len(loc) 
+    assert lo_nc <= nic
+    assert lo_nc == len(a)
+    coil_arg_init = []
+    for i in range(lo_nc):
+        lenai = len(a[i])
+        coil_args = []
+        for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
+            start = int(a[i][j][0])
+            end = int(a[i][j][1])
+            if end <= ns-3:
+                coil_arg = [c_init[int(loc[i]), :, start:end+3]]
+            elif end > ns-3:
+                coil_arg = [c_init[int(loc[i]), :, start:-3]]
+            coil_args.append(coil_arg)
+        coil_arg_init.append(coil_args)
+    return coil_arg_init
 
 
 def init_I(args):
@@ -186,88 +216,38 @@ def init_I(args):
     return I
 
 
-def get_B_extern(args):
-    B_extern = args['B_extern']
-    return B_extern
+def get_Bn_extern(args):
+    if args['Bn_extern'] == 1:
+        BNC, BNS, MZ, MT, Nfp = read_plasma.read_finite_beta(args['Bn_extern_file'])
+        zeta = np.linspace(0,2 * np.pi, args['number_zeta'] + 1)[:-1]
+        theta = np.linspace(0, 2 * np.pi, args['number_theta'] + 1)[:-1]
+        bn = np.zeros((args['number_zeta'], args['number_theta']))
+        for mz in range(-MZ, MZ + 1):
+            for mt in range(MT):
+                bn += BNS[mz + MZ, mt] * np.sin( mt * theta[np.newaxis, :] - mz * Nfp * zeta[:, np.newaxis] )
+    return bn
+
+
+def test(args):
+    nic = args['number_independent_coils']
+
+    assert args['number_coils'] == args['number_field_periods'] * (args['stellarator_symmetry'] + 1) * nic
+    
+    if len(args['length_normal']) != nic:
+        ln = np.max(np.array(args['length_normal']))
+        args['length_normal'] = [ln for i in range(nic)]
+    if len(args['length_binormal']) != nic:
+        lb = np.max(np.array(args['length_binormal']))
+        args['length_binormal'] = [lb for i in range(nic)]    
 
 
 
-def read_hdf5(filename):
-    f = h5py.File(filename, "r")
-    arge = {}
-    for key in list(f.keys()):
-        arge.update({key: f[key][:]})
-    f.close()
-    return arge
 
 
-def read_makegrid(filename, nic, ns):    
-    """
-    读取初始线圈的makegrid文件
-    Args:
-        filename : str, 文件地址
-        nic : int, 独立线圈数, 
-        ns : int, 线圈段数
-    Returns:
-        r : array, [nic, ns+1, 3], 线圈初始坐标
-
-    """
-    r = np.zeros((nic, ns+1, 3))
-    with open(filename) as f:
-        _ = f.readline()
-        _ = f.readline()
-        _ = f.readline()
-        for i in range(nic):
-            for s in range(ns):
-                x = f.readline().split()
-                r = r.at[i, s, 0].set(float(x[0]))
-                r = r.at[i, s, 1].set(float(x[1]))
-                r = r.at[i, s, 2].set(float(x[2]))
-            _ = f.readline()
-    r = r.at[:, -1, :].set(r[:, 0, :])
-    return r
 
 
-def read_axis(filename):
-    """
-	Reads the magnetic axis from a file.
 
-	Expects the filename to be in a specified form, which is the same as the default
-	axis file given. 
 
-	Parameters: 
-		filename (string): A path to the file which has the axis data
-		N_zeta_axis (int): The toroidal (zeta) resolution of the magnetic axis in real space
-		epsilon: The ellipticity of the axis
-		minor_rad: The minor radius of the axis, a
-		N_rotate: Number of rotations of the axis
-		zeta_off: The offset of the rotation of the surface in the ellipse relative to the zero starting point. 
 
-	Returns: 
-		axis (Axis): An axis object for the specified parameters.
-	"""
-    with open(filename, "r") as file:
-        file.readline()
-        _, _ = map(int, file.readline().split(" "))
-        file.readline()
-        xc = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        xs = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        yc = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        ys = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        zc = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        zs = np.asarray([float(c) for c in file.readline().split(" ")])
-        file.readline()
-        file.readline()
-        file.readline()
-        file.readline()
-        file.readline()
-        file.readline()
-        file.readline()
-        epsilon, minor_rad, N_rotate, zeta_off = map(float, file.readline().split(" "))
 
-    return xc, xs, yc, ys, zc, zs, epsilon, minor_rad, N_rotate, zeta_off
+    pass

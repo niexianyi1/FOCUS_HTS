@@ -1,10 +1,10 @@
 
 
 ## 运行结束，保存数据到文件
-
+str.encode('utf-8')
 import h5py
 import jax.numpy as np
-import numpy
+
 
 
 
@@ -54,7 +54,7 @@ def save_hdf5(args, coil_all, loss_end, surface_data):     # 根据需求写入�
 
 def save_makegrid(args, coil_all):    # 或者直接输入r, I
     r = coil_all['coil_r']
-    I = coil_all['coil_I_new']
+    I = coil_all['coil_I']
     with open(args['out_coil_makegrid'], "w") as f:
         f.write("periods {}\n".format(0))
         f.write("begin filament\n")

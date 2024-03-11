@@ -40,7 +40,7 @@ def read_hdf5(filename):
     args = {}
     print(f.keys())
     for key in list(f.keys()):
-        args.update({key: f[key][:]})
+        args.update({key: f[key][()]})
     f.close()
     return args
 

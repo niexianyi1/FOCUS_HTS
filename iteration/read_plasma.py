@@ -8,7 +8,11 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 
 
-
+def plasma_surface(args):
+    R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_vmec_file']))
+    r, nn, sg = get_plasma_boundary(R, Z, args['number_zeta'], args['number_theta'], Nfp, MT, MZ)
+    args['number_field_periods'] = Nfp
+    return r, nn, sg, args
 
 def read_plasma_boundary(filename):
     
@@ -23,8 +27,8 @@ def read_plasma_boundary(filename):
         for i in range(bmn):
             n, m, rc, _, _, zs = f.readline().split()
             N[i] = n
-        nmax = numpy.max(N)
-    MZ = int(nmax)
+        NMax = numpy.max(N)
+    MZ = int(NMax)
     MT = int((bmn - MZ-1) / (2*MZ+1) + 1)
 
     R = numpy.zeros((2*MZ+1, MT))
@@ -39,10 +43,8 @@ def read_plasma_boundary(filename):
             n, m, rc, _, _, zs = f.readline().split()
             n = int(n)
             m = int(m)
-            rc = float(rc)
-            zs = float(zs)
-            R[n+8, m] = rc
-            Z[n+8, m] = zs
+            R[n+MZ, m] = float(rc)
+            Z[n+MZ, m] = float(zs)
     return R, Z, Nfp, MT, MZ
 
 def get_xyz(R, Z, zeta, theta, Nfp, MT, MZ):
@@ -96,9 +98,23 @@ def get_plasma_boundary(R, Z, NZ, NT, Nfp, MT, MZ):
     return r, nn, sg
 
 
-def plasma_surface(args):
-    R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_vmec_file']))
-    r, nn, sg = get_plasma_boundary(R, Z, args['number_zeta'], args['number_theta'], Nfp, MT, MZ)
+def read_finite_beta(filename):
 
-    return r, nn, sg
+    with open(filename) as f:
+        _ = f.readline()
+        bmn, Nfp, nbf = f.readline().split()
+        bmn, Nfp, nbf = int(bmn), int(Nfp), int(nbf)
+        for i in range(bmn+4):
+            _ = f.readline()
+        n, m, bnc, bns = f.readline().split()
+        n, m = int(n), int(m)
+        MZ = n
+        MT = int(nbf/(2*MZ+1))
+        BNC, BNS = numpy.zeros((2*MZ+1, MT)), numpy.zeros((2*MZ+1, MT))
+        BNC[n+MZ, m], BNS[n+MZ, m] = float(bnc), float(bns)
+        for i in range(nbf-1):
+            n, m, bnc, bns = f.readline().split()
+            n, m = int(n), int(m)
+            BNC[n+MZ, m], BNS[n+MZ, m] = float(bnc), float(bns)
 
+    return BNC, BNS, MZ, MT, Nfp

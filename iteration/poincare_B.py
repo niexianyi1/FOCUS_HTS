@@ -2,7 +2,6 @@ import jax.numpy as np
 from jax.experimental.ode import odeint
 from functools import partial
 from jax.config import config
-import jax
 from jax import jit
 from scipy.integrate import solve_ivp
 import sys
@@ -62,7 +61,8 @@ def tracing(r_coil, dl, r0, z0, phi0, niter, nfp, nstep, **kwargs):
         cosphi = np.cos(phi)
         sinphi = np.sin(phi)
         xyz = np.array([rpz[0] * cosphi, rpz[0] * sinphi, rpz[2]])
-        mag_xyz = np.ravel(computeB(xyz, dl, r_coil))
+        Bxyz = lambda xyz : computeB(xyz, dl, r_coil)
+        mag_xyz = np.ravel(Bxyz(xyz))
         mag_rpz = np.array(
             [
                 mag_xyz[0] * cosphi + mag_xyz[1] * sinphi,
@@ -70,6 +70,7 @@ def tracing(r_coil, dl, r0, z0, phi0, niter, nfp, nstep, **kwargs):
                 mag_xyz[2],
             ]
         )
+        
         return [mag_rpz[0] / mag_rpz[1], mag_rpz[2] / mag_rpz[1]]
 
     # some settings

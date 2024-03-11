@@ -10,7 +10,7 @@ def compute_coil_fourierSeries(nic, ns, nfc, coil):
     of the coil fourier series in a single array 
 
     Inputs:
-    r_centroid (nparray): vector of length nic x ns + 1 x 3, initial coil centroid
+    r_centroid (nparray): vector of length [nic, (ns + 1), 3], initial coil centroid
 
     Returns:
     6 x nic x nfc array with the Fourier Coefficients of the initial coils
