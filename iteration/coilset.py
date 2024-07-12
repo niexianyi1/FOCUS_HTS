@@ -1,10 +1,12 @@
 import jax.numpy as np
-from jax import jit, vmap
+from jax import jit, vmap, config
 import numpy
-from jax.config import config
 import fourier
 import spline
 import lossfunction
+# import sys
+# sys.path.append('HTS')
+# import self_B
 config.update("jax_enable_x64", True)
 pi = np.pi
 
@@ -28,7 +30,7 @@ class CoilSet:
         self.nn = args['number_normal']
         self.nb = args['number_binormal']
         self.nr = args['number_rotate']
-        self.nfc = args['num_fourier_coils']
+        self.nfc = args['number_fourier_coils']
         self.nfr = args['number_fourier_rotate']
         self.theta = np.linspace(0, 2 * pi, self.ns + 1)
         return
@@ -49,16 +51,20 @@ class CoilSet:
             der1, der2, der3 : array, [nc, ns, 3], 中心点线圈各阶导数值
         """
         coil_arg, fr, I = params  
-        # print(coil_arg) 
+        if self.args['total_current_I'] != 0:
+            In = self.args['total_current_I'] / self.args['I_normalize'] - np.sum(I)
+            I = np.append(I, In)
+        else:
+            I = np.append(I, 1)
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, der3, dt = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
         centroid_frame = tangent, normal, binormal
         dTdt, dNdt, dBdt = CoilSet.compute_com_deriv(self, centroid_frame, der1, der2, coil_centroid)
         alpha = CoilSet.compute_alpha(self, fr)
-        alpha1 = CoilSet.compute_alpha_1(self, fr)
+        alpha1 = CoilSet.compute_alpha_der(self, fr)
         v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
-        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, alpha, alpha1, centroid_frame, dNdt, dBdt)
+        dv1_dt, dv2_dt = CoilSet.compute_frame_der(self, alpha, alpha1, centroid_frame, dNdt, dBdt)
         r = CoilSet.compute_r(self, v1, v2, coil_centroid)
         dl = CoilSet.compute_dl(self, dv1_dt, dv2_dt, der1, dt)
         if self.ss == 1 :
@@ -82,11 +88,8 @@ class CoilSet:
             for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
                 start = int(a[i][j][0])
                 end = int(a[i][j][1])
-                if end <= self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end+3].set[coil_arg[i][j]]
-                elif end > self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:-3].set(coil_arg[i][j])
-        
+                coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end].set(
+                                np.squeeze(np.array(coil_arg[i][j])))
         return coil_arg_c
 
 
@@ -102,7 +105,7 @@ class CoilSet:
 
         """     
         def compute_coil_fourier(self, coil_arg):
-            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns)
             coil_centroid = coil_centroid[:, :-1, :]
             return coil_centroid
 
@@ -144,9 +147,9 @@ class CoilSet:
 
         """   
         def compute_coil_der_fourier(self, coil_arg):          
-            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns)
+            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns)
+            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns)
             der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
             dt = 2 * pi / self.ns
             return der1, der2, der3, dt
@@ -300,7 +303,7 @@ class CoilSet:
         return alpha[:, :-1]
 
 
-    def compute_alpha_1(self, fr):   
+    def compute_alpha_der(self, fr):   
         """计算有限截面旋转角的导数""" 
         alpha_1 = np.zeros((self.nic, self.ns+1 ))
         alpha_1 += self.nr / 2
@@ -330,7 +333,7 @@ class CoilSet:
         return v1, v2
 
 
-    def compute_frame_derivative(self, alpha, alpha1, frame, dNdt, dBdt): 
+    def compute_frame_der(self, alpha, alpha1, frame, dNdt, dBdt): 
         _, N, B = frame
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
@@ -347,14 +350,6 @@ class CoilSet:
             - salpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         return dv1_dt, dv2_dt
-
-
-    def compute_cd(self, coil_centroid, der1, der2):
-        curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
-        deltal = np.zeros((self.nic, self.ns, 3))   
-        deltal = deltal.at[:, :-1, :].set(coil_centroid[:, 1:, :] - coil_centroid[:, :-1, :])
-        deltal = deltal.at[:, -1, :].set(coil_centroid[:, 0, :] - coil_centroid[:, -1, :])
-        return curva, deltal
 
 
     def compute_r(self, v1, v2, coil_centroid):     ### 每个线圈截面独立计算
@@ -376,8 +371,6 @@ class CoilSet:
                         (n - 0.5 * (self.nn - 1)) * self.ln[:, np.newaxis, np.newaxis] * v1 + 
                         (b - 0.5 * (self.nb - 1)) * self.lb[:, np.newaxis, np.newaxis] * v2
                     ) 
-
-
         return r
 
     def compute_dl(self, dv1_dt, dv2_dt, der1, dt):   
@@ -389,8 +382,6 @@ class CoilSet:
                         (n - 0.5 * (self.nn - 1)) * self.ln[:, np.newaxis, np.newaxis] * dv1_dt + 
                         (b - 0.5 * (self.nb - 1)) * self.lb[:, np.newaxis, np.newaxis] * dv2_dt
                     )
-
-        
         return dl * dt
         
   
@@ -439,8 +430,12 @@ class CoilSet:
         return coil
 
 
+    def compute_curva(self, der1, der2):
+        curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
+        return curva
 
-    def get_fb_args(self, params):
+
+    def get_fb_input(self, params):
         coil_arg, fr, I = params   
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, _, dt = CoilSet.compute_coil_der(self, coil_arg)   
@@ -448,31 +443,30 @@ class CoilSet:
         centroid_frame = tangent, normal, binormal
         alpha = CoilSet.compute_alpha(self, fr)
         v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
-        curva, deltal = CoilSet.compute_cd(self, coil_centroid, der1, der2)
+        curva = CoilSet.compute_curva(self, der1, der2)
         dl = der1[:, np.newaxis, np.newaxis, :, :] * dt
         coil_centroid = coil_centroid[:, np.newaxis, np.newaxis, :, :]
-        _, jc, _, _ = lossfunction.compute_signleI(self.args, 
-                coil_centroid, I, dl, v1, v2, binormal, curva, deltal, self.args['B_extern_surface'])
-        n_total = (I / jc / self.args['HTS_I_percent'] / self.args['HTS_structural_percent'])
-        lw = np.sqrt(n_total)
-        lt = n_total / lw
-        self.args['length_normal'] = lw / self.nn
-        self.args['length_binormal'] = lt / self.nb
-        return self.args
+        B_self_input = (coil_centroid, I, dl, v1, v2, binormal, curva, der2)
+        return  B_self_input
 
 
     def end_coil(self, params):
         """迭代结束后的输出, 通过字典将相关量整合"""
         coil_arg, fr, I = params   
+        if self.args['total_current_I'] != 0:
+            In = self.args['total_current_I'] / self.args['I_normalize'] - np.sum(I)
+            I = np.append(I, In)
+        else:
+            I = np.append(I, 1)
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, der3, dt = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
         centroid_frame = tangent, normal, binormal
         dTdt, dNdt, dBdt = CoilSet.compute_com_deriv(self, centroid_frame, der1, der2, coil_centroid)
         alpha = CoilSet.compute_alpha(self, fr)
-        alpha1 = CoilSet.compute_alpha_1(self, fr)
+        alpha1 = CoilSet.compute_alpha_der(self, fr)
         v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
-        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, alpha, alpha1, centroid_frame, dNdt, dBdt)     
+        dv1_dt, dv2_dt = CoilSet.compute_frame_der(self, alpha, alpha1, centroid_frame, dNdt, dBdt)     
         r = CoilSet.compute_r(self, v1, v2, coil_centroid)
         dl = CoilSet.compute_dl(self, dv1_dt, dv2_dt, der1, dt)
         if self.ss == 1 :
@@ -482,6 +476,7 @@ class CoilSet:
         r = CoilSet.symmetry_coil(self, r)
         dl = CoilSet.symmetry_coil(self, dl)
         I = CoilSet.symmetry_I(self, I) 
+        I = I * self.args['I_normalize']
         
         if self.args['coil_case'] == 'spline':  
             coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))

@@ -24,7 +24,7 @@ w_psurf w_csurf w_bnuv w_jsurf w_xerr w_svd
 
 ------ Current Surface: Coil-Plasma separation =   1.321554754228E+00 -----
 Number of fourier modes in table
-         140
+140 3 0
 Table of fourier coefficients
 m,n,crc2,czs2,crs2,czc2
     0   0  1.0034E+01  0.0000E+00  0.0  0.0

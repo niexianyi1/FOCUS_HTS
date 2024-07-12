@@ -8,7 +8,7 @@ config.update("jax_enable_x64", True)    # float64
 
 ## 在这里需要一个重合点，输入时自带
 def get_c_init(coil, nic, ns, ncp):       
-    """开始运行程序时调用,下接prep和tjev
+    """开始运行程序时调用,下接compute_splineseries和tjev
 
     Args:
         coil, 初始线圈坐标
@@ -23,7 +23,7 @@ def get_c_init(coil, nic, ns, ncp):
     """
 
     # 引用函数计算
-    c, bc  = prep(coil, nic, ns, ncp, 3)    # c是控制点，作为优化变量，其他非优化参数都包含在bc里
+    c, bc  = compute_splineseries(coil, nic, ns, ncp, 3)    # c是控制点，作为优化变量，其他非优化参数都包含在bc里
     tj = tjev(bc)    # 获取节点序列，见文档
     return c, bc, tj
 
@@ -81,7 +81,7 @@ def tjev(bc):
             tj[i] = j
     return tj
 
-def prep(rc, nic, ns, ncp, k):  
+def compute_splineseries(rc, nic, ns, ncp, k):  
     """获取控制点c,
     Args:
         rc,     array,  [nic, ns, 3]  线圈坐标
@@ -94,6 +94,15 @@ def prep(rc, nic, ns, ncp, k):
         bc,     list,   [t,u,k]   B样条函数其他参数,非优化参数
     """
     rc = numpy.array(np.transpose(rc, (0, 2, 1))) # 格式转换，转为scipy支持的格式
+    if rc.shape[2] != ncp-2:  # 为了让控制点数与输入点数匹配
+        rc_new = np.zeros((nic, 3, ncp-2))  
+        u = np.linspace(0, (ncp-4)/(ncp-3) ,ncp-3)
+        for i in range(nic):
+            tck, _ = si.splprep(x=rc[i], k=3, per=1, s=0)  # 调用scipy
+            rc_new = rc_new.at[i, :, :-1].set(si.splev(u, tck))
+            rc_new = rc_new.at[i, :, -1].set(rc_new[i, :, 0])
+        rc = numpy.array(rc_new)
+        
     c = np.zeros((nic, 3, ncp))   
     t = np.linspace(-3/(ncp-3), (ncp)/(ncp-3), ncp+4) 
     t = t.at[3].set(float(0))

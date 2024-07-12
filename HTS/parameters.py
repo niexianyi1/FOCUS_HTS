@@ -151,37 +151,43 @@ S B L Chislett-McDonald @ Durham University.
 """
 
 
-REBCO_Other_parameters = {
+REBCO_LT_parameters = {
     "A_0": 62500,
     "p": 0.451,
     "q": 1.44,
     "n": 3.33,
     "s": 5.27,
+    "c1":0.00224,
     "c2": -0.0198,
     "c3": 0.0039,
     "c4": 0.00103,
     "em": 0.058,
     "u": 0,
     "w": 2.2,
-    "Bc20max": 429,
+    "Bc20max": 139,
     "Tc0": 185,
+    'gamma':1.422,
+    'eta':0.047,
 }
 
 
-REBCO_parameters = {
-    "A_0": 295 / 0.31,
-    "p": 0.32,
-    "q": 2.50,
-    "n": 3.33,
-    "s": 5.27,
-    "c2": -0.0191,
-    "c3": 0.0039,
-    "c4": 0.00103,
+REBCO_HT_parameters = {
+    "A_0": 6.55e6,
+    "p": 0.581,
+    "q": 2.86,
+    "n": 2.66,
+    "s": 1.26,
+    'c1':0.00139,
+    "c2": -0.0294,
+    "c3": 0.0104,
+    "c4": 0.0052,
     "em": 0.058,
     "u": 0,
     "w": 2.2,
-    "Bc20max": 429,
-    "Tc0": 185,
+    "Bc20max": 98.7,
+    "Tc0": 90.1,
+    'gamma':1.422,
+    'eta':0.047,
 }
 """
 ### REBCO Parameters
@@ -194,9 +200,11 @@ analysis.
 - c2, c3, c4, em : parameters used to calculate the strain function of the superconductor.
 - u, w : ratio of these used to calculate the exponent of the strain function.
 - Bc20max, Tc0 : upper critical values of the superconductor.
-
 These parameters have been taken from the PROCESS systems code and were determined experimentally by
 ????? S B L Chislett-McDonald @ Durham University. ?????
+------------------
+补充, 数据来源:<Weak emergence in the angular dependence of the critical current density of the high temperature
+superconductor coated conductor REBCO>, Paul Branch et al 2020 Supercond. Sci. Technol. 33 104006
 """
 
 HIJC_REBCO_parameters = {

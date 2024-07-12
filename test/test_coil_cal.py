@@ -31,7 +31,7 @@ class CoilSet:
         self.nn = args['number_normal']
         self.nb = args['number_binormal']
         self.nr = args['number_rotate']
-        self.nfc = args['num_fourier_coils']
+        self.nfc = args['number_fourier_coils']
         self.nfr = args['number_fourier_rotate']
         self.theta = np.linspace(0, 2 * pi, self.ns + 1)
         return
@@ -84,11 +84,7 @@ class CoilSet:
             for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
                 start = int(a[i][j][0])
                 end = int(a[i][j][1])
-                if end <= self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end+3].set[coil_arg[i][j]]
-                elif end > self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:-3].set(coil_arg[i][j])
-        
+                coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end+3].set[coil_arg[i][j]]
         return coil_arg_c
                 
     def compute_coil_centroid(self, coil_arg):    
@@ -103,20 +99,21 @@ class CoilSet:
 
         """     
         if self.args['coil_case'] == 'fourier':        
-            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns)
             coil_centroid = coil_centroid[:, :-1, :]
         
         elif self.args['coil_case'] == 'spline':
             t, u, k = self.args['bc']
-            if self.args['local_optimize'] == 0:
-                coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))
-                print(coil_arg_c.shape)
-                coil_arg_c = coil_arg_c.at[:, :, :-3].set(coil_arg)
-                coil_arg_c = coil_arg_c.at[:, :, -3:].set(coil_arg[:, :, :3])
-            
-            elif self.args['local_optimize'] == 1:
-                coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
+            coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))
+            print(coil_arg_c.shape)
+            coil_arg_c = coil_arg_c.at[:, :, :-3].set(coil_arg)
+            coil_arg_c = coil_arg_c.at[:, :, -3:].set(coil_arg[:, :, :3])
+            coil_centroid = vmap(lambda coil_arg_c :spline.splev(t, u, coil_arg_c, self.args['tj'], self.ns), 
+                    in_axes=0, out_axes=0)(coil_arg_c)
 
+        elif self.args['coil_case'] == 'spline_local':
+            t, u, k = self.args['bc']
+            coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
             coil_centroid = vmap(lambda coil_arg_c :spline.splev(t, u, coil_arg_c, self.args['tj'], self.ns), 
                     in_axes=0, out_axes=0)(coil_arg_c)
         
@@ -134,9 +131,9 @@ class CoilSet:
 
         """   
         if self.args['coil_case'] == 'fourier':          
-            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns)
+            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns)
+            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns)
             der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
             dt = 2 * pi / self.ns
         elif self.args['coil_case'] == 'spline':
@@ -323,12 +320,13 @@ class CoilSet:
 
         r = np.zeros((self.nic, self.nn, self.nb, self.ns, 3))
         r += coil_centroid[:, np.newaxis, np.newaxis, :, :]
-
+        self.ln = 0.1296
+        self.lb = 0.0568
         for n in range(self.nn):
             for b in range(self.nb):
                     r = r.at[:, n, b, :, :].add(
-                        (n - 0.5 * (self.nn - 1)) * self.ln[:, np.newaxis, np.newaxis] * v1 + 
-                        (b - 0.5 * (self.nb - 1)) * self.lb[:, np.newaxis, np.newaxis] * v2
+                        (n - 0.5 * (self.nn - 1)) * self.ln * v1 + 
+                        (b - 0.5 * (self.nb - 1)) * self.lb * v2
                     ) 
 
         return r
@@ -466,8 +464,8 @@ class CoilSet:
         v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
         curva, deltal = CoilSet.compute_cd(self, coil_centroid, der1, der2)
         dl = der1*dt
-
-        return coil_centroid, dl, normal, binormal, curva
+        sec = CoilSet.compute_r(self, v1, v2, coil_centroid)
+        return coil_centroid, dl, normal, binormal, v1, v2, curva, sec
 
     def frenet_frame(self, der1, der2):
         tangent = der1 / np.linalg.norm(der1, axis=-1)[:, :, np.newaxis]

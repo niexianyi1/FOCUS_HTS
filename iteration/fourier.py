@@ -1,8 +1,7 @@
 import jax.numpy as np
 from jax import config
-
 config.update("jax_enable_x64", True)
-
+pi = np.pi
 
 def compute_coil_fourierSeries(nic, ns, nfc, coil):
     """ 
@@ -38,8 +37,9 @@ def compute_coil_fourierSeries(nic, ns, nfc, coil):
     fc = np.asarray([xc, yc, zc, xs, ys, zs])  # 6 x nic x nfc
     return fc  
 
-def compute_r_centroid(fc, nfc, nic, ns, theta):
+def compute_r_centroid(fc, nfc, nic, ns):
     """ Computes the position of the winding pack centroid using the coil fourier series """
+    theta = np.linspace(0, 2 * pi, ns + 1)
     xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
     x = np.zeros((nic, ns + 1))
     y = np.zeros((nic, ns + 1))
@@ -58,7 +58,8 @@ def compute_r_centroid(fc, nfc, nic, ns, theta):
         (x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis=2)
     return rc
 
-def compute_der1(fc, nfc, nic, ns, theta):
+def compute_der1(fc, nfc, nic, ns):
+    theta = np.linspace(0, 2 * pi, ns + 1)
     xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
     x1 = np.zeros((nic, ns + 1))
     y1 = np.zeros((nic, ns + 1))
@@ -77,7 +78,8 @@ def compute_der1(fc, nfc, nic, ns, theta):
         (x1[:, :, np.newaxis], y1[:, :, np.newaxis], z1[:, :, np.newaxis]), axis=2)
     return der1
 
-def compute_der2(fc, nfc, nic, ns, theta):
+def compute_der2(fc, nfc, nic, ns):
+    theta = np.linspace(0, 2 * pi, ns + 1)
     xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
     x2 = np.zeros((nic, ns + 1))
     y2 = np.zeros((nic, ns + 1))
@@ -97,7 +99,8 @@ def compute_der2(fc, nfc, nic, ns, theta):
         (x2[:, :, np.newaxis], y2[:, :, np.newaxis], z2[:, :, np.newaxis]), axis=2)
     return der2
 
-def compute_der3(fc, nfc, nic, ns, theta):
+def compute_der3(fc, nfc, nic, ns):
+    theta = np.linspace(0, 2 * pi, ns + 1)
     xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
     x3 = np.zeros((nic, ns + 1))
     y3 = np.zeros((nic, ns + 1))

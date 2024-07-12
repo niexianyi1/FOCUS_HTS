@@ -1,12 +1,12 @@
 import jax.numpy as np
-from jax import jit, vmap
-from jax.config import config
+from jax import jit, vmap, config
+
 import sys
 sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
 import fourier
 import spline
 import lossfunction
-import self_B
+import B_self
 config.update("jax_enable_x64", True)
 pi = np.pi
 
@@ -30,7 +30,7 @@ class CoilSet:
         self.nn = args['number_normal']
         self.nb = args['number_binormal']
         self.nr = args['number_rotate']
-        self.nfc = args['num_fourier_coils']
+        self.nfc = args['number_fourier_coils']
         self.nfr = args['number_fourier_rotate']
         self.theta = np.linspace(0, 2 * pi, self.ns + 1)
         return
@@ -51,7 +51,8 @@ class CoilSet:
             der1, der2, der3 : array, [nc, ns, 3], 中心点线圈各阶导数值
         """
         coil_arg, fr, I = params  
-        # print(coil_arg) 
+        if self.args['coil_case'] == 'spline_local':
+            coil_arg = CoilSet.local_coil(self, self.args['c_init'])
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, der3, dt = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
@@ -78,18 +79,33 @@ class CoilSet:
         a = self.args['optimize_location_ns']
         loc = self.args['optimize_location_nic']
         lo_nc = len(loc) 
-        coil_arg_c = self.args['c_init']
+        coil_arg_c = np.array(self.args['c_init'])
         for i in range(lo_nc):
             lenai = len(a[i])
             for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
                 start = int(a[i][j][0])
                 end = int(a[i][j][1])
-                if end <= self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end+3].set[coil_arg[i][j]]
-                elif end > self.ns-3:
-                    coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:-3].set(coil_arg[i][j])
-        
+                coil_arg_c = coil_arg_c.at[int(loc[i]), :, start:end].set(
+                                np.squeeze(np.array(coil_arg[i][j])))
         return coil_arg_c
+
+    def local_coil(self, c_init):
+        a = self.args['optimize_location_ns']
+        loc = self.args['optimize_location_nic']
+        lo_nc = len(loc) 
+        assert lo_nc <= self.nic
+        assert lo_nc == len(a)
+        coil_arg_init = []
+        for i in range(lo_nc):
+            lenai = len(a[i])
+            coil_args = []
+            for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
+                start = int(a[i][j][0])
+                end = int(a[i][j][1])
+                coil_arg = [c_init[int(loc[i]), :, start:end]]
+                coil_args.append(coil_arg)
+            coil_arg_init.append(coil_args)
+        return coil_arg_init
 
 
     def compute_coil_centroid(self, coil_arg):    
@@ -104,7 +120,7 @@ class CoilSet:
 
         """     
         def compute_coil_fourier(self, coil_arg):
-            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns)
             coil_centroid = coil_centroid[:, :-1, :]
             return coil_centroid
 
@@ -120,6 +136,7 @@ class CoilSet:
 
         def compute_coil_spline_local(self, coil_arg):
             t, u, k = self.args['bc']
+            
             coil_arg_c = CoilSet.local_arg_c(self, coil_arg)
             coil_centroid = vmap(lambda coil_arg_c :spline.splev(t, u, coil_arg_c, self.args['tj'], self.ns), 
                     in_axes=0, out_axes=0)(coil_arg_c)
@@ -146,9 +163,9 @@ class CoilSet:
 
         """   
         def compute_coil_der_fourier(self, coil_arg):          
-            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns, self.theta)
-            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns, self.theta)
+            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns)
+            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns)
+            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns)
             der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
             dt = 2 * pi / self.ns
             return der1, der2, der3, dt
@@ -438,6 +455,8 @@ class CoilSet:
 
     def get_coil(self, params):
         coil_arg, fr, I = params   
+        if self.args['coil_case'] == 'spline_local':
+            coil_arg = CoilSet.local_coil(self, self.args['c_init'])
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, _, _, _ = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
@@ -452,6 +471,8 @@ class CoilSet:
 
     def get_plot_args(self, params):
         coil_arg, fr, I = params   
+        if self.args['coil_case'] == 'spline_local':
+            coil_arg = CoilSet.local_coil(self, self.args['c_init'])
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, _, dt = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
@@ -465,13 +486,8 @@ class CoilSet:
         dl = CoilSet.stellarator_symmetry_coil(self, dl)
         r = CoilSet.symmetry_coil(self, r)
         dl = CoilSet.symmetry_coil(self, dl)
-        B_coil = self_B.coil_self_B_4(self.args, r, I, dl, v1, v2, binormal, curva)
-        # n_total = np.ceil(I / jc / self.args['HTS_I_percent'])
-        # lw = np.sqrt(n_total)
-        # lt = n_total / lw
+        B_coil = B_self.coil_self_B_rec(self.args, r, I, dl, v1, v2, binormal, curva, der2)
 
-        # self.args['length_normal'] = lw / self.nn
-        # self.args['length_binormal'] = lt / self.nb
         return self.args, B_coil
 
 

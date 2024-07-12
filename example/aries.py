@@ -24,9 +24,9 @@ args = {
     'optimizer_coil':           'momentum', # (opt) str,    线圈参数迭代方法,  (sgd, gd, momentum, or adam)  
     'optimizer_fr':             'momentum', # (opt) str,    旋转参数迭代方法,  (sgd, gd, momentum, or adam)  
     'optimizer_I':              'momentum', # (opt) str,    电流参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'learning_rate_coil':       2e-4,       # (lrc) float,  参数coil_arg, 迭代步长, 为0则不优化                      
-    'learning_rate_fr':         1e-5,       # (lrfr)float,  参数fr, 迭代步长, 为0则不优化
-    'learning_rate_I':          0,       # (lrfr)float,  参数I, 迭代步长, 为0则不优化   
+    'step_size_coil':       2e-4,       # (lrc) float,  参数coil_arg, 迭代步长, 为0则不优化                      
+    'step_size_fr':         1e-5,       # (lrfr)float,  参数fr, 迭代步长, 为0则不优化
+    'step_size_I':          0,       # (lrfr)float,  参数I, 迭代步长, 为0则不优化   
     'momentum_mass':            0.9,        # (mom) float,  梯度下降的动量参数
     'axis_resolution':          10,         # (res) int,    Resolution of the axis, multiplies NZ                        
     'var':                      0.999,
@@ -52,7 +52,7 @@ args = {
             '/home/nxy/codes/coil_spline_HTS/initfiles/qas/coils_3.npy',       
 
     # Fourier表示
-    'num_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
+    'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
                      
     # Bspline表示
     'number_control_points':    67,         # (ncp) int,    每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合                   
@@ -117,7 +117,7 @@ args = {
 
 # LTS/HTS材料
 
-    'HTS_material':             'Nb3Sn',    # str,    材料类型, REBCO_Other, NbTi, Nb3Sn    
+    'HTS_material':             'Nb3Sn',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
     'HTS_width':                0.04,      # (w)   float,  HTS材料总宽度 或 LTS材料直径
     'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 包括相邻间隙
     'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 包括相邻间隙

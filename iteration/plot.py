@@ -7,14 +7,15 @@ import jax.numpy as np
 import plotly.graph_objects as go
 import coilset
 import spline
-import poincare_B
+import poincare_trace 
 import coilpy
+import sys
+sys.path.append('HTS')
+import B_self
 
 
 
-
-
-def plot(args, coil_all, lossvals, params, surface_data):
+def plot(args, coil_all, loss_end, lossvals, params, surface_data):
     """
     按照init_args中设置进行画图
 
@@ -32,7 +33,7 @@ def plot(args, coil_all, lossvals, params, surface_data):
     """
 
     if args['plot_coil'] != 0 :
-        plot_coil(args, params, surface_data)
+        plot_coil(args, params, surface_data, loss_end)
     if args['plot_loss'] != 0 :
         plot_loss(lossvals)
     if args['plot_poincare'] != 0 :
@@ -40,7 +41,7 @@ def plot(args, coil_all, lossvals, params, surface_data):
 
     return
 
-def plot_coil(args, params, surface_data):    # 线圈
+def plot_coil(args, params, surface_data, loss_end):    # 线圈
     """
     画线圈, 同时按照number_points进行加密。
 
@@ -61,6 +62,10 @@ def plot_coil(args, params, surface_data):    # 线圈
     args['number_segments'] = args['number_points'] 
     coil_cal = coilset.CoilSet(args)    
     coil = coil_cal.get_coil(params)
+    I, dl, coil, der1, der2, _, v1, v2, binormal = coil_cal.cal_coil(params)
+    I = I * args['I_normalize']
+    curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
+    B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
     args['number_segments'] = ns
 
     ns = args['number_points']
@@ -120,26 +125,49 @@ def plot_coil(args, params, surface_data):    # 线圈
         rr = np.zeros((5, nic, ns+1, 3))
         rr = rr.at[0,:,:ns,:].set(coil[:nic, 0, 0, :, :])
         rr = rr.at[1,:,:ns,:].set(coil[:nic, 0, nb-1, :, :])
-        rr = rr.at[2,:,:ns,:].set(coil[:nic, nn-1, nb-1, :, :])
-        rr = rr.at[3,:,:ns,:].set(coil[:nic, nn-1, 0, :, :])
+        rr = rr.at[3,:,:ns,:].set(coil[:nic, nn-1, nb-1, :, :])
+        rr = rr.at[2,:,:ns,:].set(coil[:nic, nn-1, 0, :, :])
         rr = rr.at[4,:,:ns,:].set(coil[:nic, 0, 0, :, :])
         rr = rr.at[0,:,-1,:].set(coil[:nic, 0, 0, 0, :])
         rr = rr.at[1,:,-1,:].set(coil[:nic, 0, nb-1, 0, :])
-        rr = rr.at[2,:,-1,:].set(coil[:nic, nn-1, nb-1, 0, :])
-        rr = rr.at[3,:,-1,:].set(coil[:nic, nn-1, 0, 0, :])
+        rr = rr.at[3,:,-1,:].set(coil[:nic, nn-1, nb-1, 0, :])
+        rr = rr.at[2,:,-1,:].set(coil[:nic, nn-1, 0, 0, :])
         rr = rr.at[4,:,-1,:].set(coil[:nic, 0, 0, 0, :])
         xx = rr[:,:,:,0]
         yy = rr[:,:,:,1]
         zz = rr[:,:,:,2]
         fig = go.Figure()
+
+        lossB = loss_end['loss_B']
+        lossB = np.linalg.norm(lossB[:nzs], axis=-1)
+        Bs = np.zeros((nzs, args['number_theta']+1))
+        Bs = Bs.at[:,:-1].set(lossB)
+        Bs = Bs.at[:,-1].set(lossB[:,0])
+
+        B_coil = np.linalg.norm(B_coil, axis=-1)
+        Bmax, Bmin = float(np.max(B_coil)), float(np.min(B_coil))
+        print(np.max(B_coil, axis=(1,2)))
+        print('maxB = ', Bmax, Bmin)
+        B = np.zeros((nic, 5, ns+1))
+        B = B.at[:, :-1, :-1].set(B_coil)
+        B = B.at[:, :-1, -1].set(B_coil[:, :, 0])
+        B = B.at[:, -1].set(B[:, 0, :])
+
+
+        fig = go.Figure()
+        # fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2],
+        #         surfacecolor = Bs, colorbar_title='B_coil [T]', 
+        #         colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="Viridis" ))
         for i in range(nic):
-            fig.add_trace(go.Surface(x=xx[:,i,:], y=yy[:,i,:], z=zz[:,i,:]))
-        fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2] ))
-        fig.update_layout(scene_aspectmode='data')
+            fig.add_trace(go.Surface(x=xx[:,i,:], y=yy[:,i,:], z=zz[:,i,:], 
+                surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
+                colorbar = dict(x = 0.1,tickfont = dict(size=20)),colorscale="plasma"))
+        fig.update_layout(coloraxis_showscale=True)
+        fig.update_layout(scene_aspectmode='data',  scene = dict(
+            xaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
+            yaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
+            zaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white")))
         fig.show() 
-
-
-
     return 
 
 
@@ -196,7 +224,7 @@ def plot_poincare(args, coil_all, surface_data):
     bfield = coil_py.bfield
     line = coilpy.misc.tracing(bfield, r0, z0, args['poincare_phi0'], 
             args['number_iter'], args['number_field_periods'], args['number_step'])
-    # line = poincare_B.tracing(coil, dl, args['poincare_r0'], args['poincare_z0'], args['poincare_phi0'], 
+    # line = poincare_trace.tracing(coil, dl, args['poincare_r0'], args['poincare_z0'], args['poincare_phi0'], 
     #         args['number_iter'], args['number_field_periods'], args['number_step'])
 
     line = np.reshape(line, (pn*(args['number_iter']+1), 2))

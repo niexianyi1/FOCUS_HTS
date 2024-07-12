@@ -113,12 +113,12 @@ nct, ncp, ncs = 12, 12, 144
 nst, nsp, nss = 99, 99, 40
 It = 2.281852279e+07
 
-rt, rs, Is = read_makegrid_saddle('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coils.dat', nct, ncs, nst, nss)
-np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coiltf_12.npy', rt)
+rt, rs, Is = read_makegrid_saddle('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coils.dat', nct, ncs, nst, nss)
+np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coiltf_12.npy', rt)
 # np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coilpf_12.npy', rp)
-np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coilsd_144.npy', rs)
+np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coilsd_144.npy', rs)
 # np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_Ip_12.npy', Ip)
-np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coil_Is_144.npy', Is)
+np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coil_Is_144.npy', Is)
 print(Is)
 
 

@@ -76,15 +76,51 @@ def NbTi(temperature, Bmax, strain):
 materials["NbTi"] = NbTi
 
 
-def REBCO_Other(temperature, Bmax, strain):
+def REBCO_LT(temperature, Bmax, strain):
     """
     Function that calculates the critical values of the superconducting material "REBCO".
     Originally authored by S B L Chislett-McDonald @ Durham University
     """
-    from parameters import REBCO_Other_parameters as p
+    from parameters import REBCO_LT_parameters as p
 
-    e_I = strain - p["em"]
-    strain_func = 1 + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
+    # e_I = strain - p["em"]
+    # strain_func = 1 + p["c1"] * e_I + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
+    # T_e = p["Tc0"] * strain_func ** (1 / p["w"])
+    # t = temperature / T_e
+    # A_e = p["A_0"] * strain_func ** (p["u"] / p["w"])
+    # B_crit = p["Bc20max"] * (1 - t) ** p["s"] * strain_func
+    # b = Bmax / B_crit
+    # T_crit = T_e
+    # x = A_e * pow((T_e * (1 - t ** 2)), 2)
+    # y = pow(B_crit, (p["n"] - 3))
+    # z = pow(b, (p["p"] - 1)) * pow(1 - b, p["q"])
+    # J_crit = x * y * z
+    e_I = strain #- p["em"]
+    strain_func = 1 + p["c1"] * e_I + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
+    T_e = p["Tc0"] * strain_func
+    t = temperature / T_e
+    A_e = p["A_0"] * strain_func ** (p["u"])
+    B_crit = p["Bc20max"] * (1 - t) ** p["s"] * strain_func ** p["w"]
+    b = Bmax / B_crit
+    T_crit = T_e
+    x = A_e * pow((T_e * (1 - t ** 2)), 2)
+    y = pow(B_crit, (p["n"] - 3))
+    z = pow(b, (p["p"] - 1)) * pow(1 - b, p["q"])
+    J_crit = x * y * z
+    return J_crit, B_crit, T_crit
+
+materials["REBCO_LT"] = REBCO_LT
+
+
+def REBCO_HT(temperature, Bmax, strain):
+    """
+    Function that calculates the critical values of the superconducting material "REBCO".
+    Originally authored by S B L Chislett-McDonald @ Durham University
+    """
+    from parameters import REBCO_HT_parameters as p
+
+    e_I = strain #- p["em"]
+    strain_func = 1 + p["c1"] * e_I + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
     T_e = p["Tc0"] * strain_func ** (1 / p["w"])
     t = temperature / T_e
     A_e = p["A_0"] * strain_func ** (p["u"] / p["w"])
@@ -97,35 +133,7 @@ def REBCO_Other(temperature, Bmax, strain):
     J_crit = x * y * z
     return J_crit, B_crit, T_crit
 
-
-materials["REBCO_Other"] = REBCO_Other
-materials["rebco_other"] = REBCO_Other
-
-
-def REBCO(temperature, Bmax, strain):
-    """
-    Function that calculates the critical values of the superconducting material "REBCO".
-    Originally authored by S B L Chislett-McDonald @ Durham University
-    """
-    from parameters import REBCO_parameters as p
-
-    e_I = strain - p["em"]
-    strain_func = 1 + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
-    T_e = p["Tc0"] * strain_func ** (1 / p["w"])
-    t = temperature / T_e
-    A_e = p["A_0"] * strain_func ** (p["u"] / p["w"])
-    B_crit = p["Bc20max"] * (1 - t) ** p["s"] * strain_func
-    b = Bmax / B_crit
-    T_crit = T_e
-    x = A_e * pow((T_e * (1 - t ** 2)), 2)
-    y = pow(B_crit, (p["n"] - 3))
-    z = pow(b, (p["p"] - 1)) * pow(1 - b, p["q"])
-    J_crit = x * y * z
-    return J_crit, B_crit, T_crit
-
-
-materials["REBCO"] = REBCO
-materials["rebco"] = REBCO
+materials["REBCO_HT"] = REBCO_HT
 
 
 def HIJC_REBCO(temperature, Bmax, strain):
@@ -149,7 +157,6 @@ def HIJC_REBCO(temperature, Bmax, strain):
 
 
 materials["HIJC_REBCO"] = HIJC_REBCO
-materials["hijc_rebco"] = HIJC_REBCO
 
 
 def Nb3Sn(temperature, Bmax, strain):
@@ -196,11 +203,12 @@ def get_critical_current(temperature, Bmax, strain, material):
         - jcrit, bcrit, tcrit: triplet of floats, defining the critical values of current, magnetic field and temperature
     respectively under the given conditions.
     """
-
+    ### 去掉百分比
+    strain = strain * 100
     material_func = materials[material]  # Assigns the function to a callable    将函数分配给可调用对象
     jcrit, bcrit, tcrit = material_func(
         temperature, Bmax, strain
     )  # gives the callable the data   为可调用对象提供数据
 
-    # rescales current to be in MA/m²
+    # rescales current to be in A/m²
     return jcrit, bcrit, tcrit

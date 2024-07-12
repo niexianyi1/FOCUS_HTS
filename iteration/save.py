@@ -12,7 +12,7 @@ def save_file(args, loss_vals, coil_all, loss_end, surface_data):
     if args['save_npy'] != 0:
         save_npy(args, coil_all, loss_vals)
     if args['save_hdf5'] != 0: 
-        save_hdf5(args, coil_all, loss_end, surface_data)
+        save_hdf5(args, coil_all, loss_end, surface_data, loss_vals)
     if args['save_makegrid'] != 0:
         save_makegrid(args, coil_all)
     return
@@ -25,7 +25,7 @@ def save_npy(args, coil_all, loss_vals):
 
 
 
-def save_hdf5(args, coil_all, loss_end, surface_data):     # 根据需求写入数据
+def save_hdf5(args, coil_all, loss_end, surface_data, loss_vals):     # 根据需求写入数据
     """ Write coils in HDF5 output format.
     Input:
 
@@ -34,7 +34,7 @@ def save_hdf5(args, coil_all, loss_end, surface_data):     # 根据需求写入�
     """
 
     with h5py.File(args['out_hdf5'], "w") as f:
-        if args['coil_case']=='spline':
+        if args['coil_case'] == 'spline' or args['coil_case'] == 'spline_local':
             bc = args['bc']
             t,u,k = bc
             f.create_dataset(name='spline_t', data=t)
@@ -49,6 +49,7 @@ def save_hdf5(args, coil_all, loss_end, surface_data):     # 根据需求写入�
         f.create_dataset(name="surface_data_r", data=surface_data[0])
         f.create_dataset(name="surface_data_nn", data=surface_data[1])
         f.create_dataset(name="surface_data_sg", data=surface_data[2])
+        f.create_dataset(name="loss_vals", data=loss_vals)
     return
 
 

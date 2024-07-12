@@ -15,19 +15,55 @@ with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:
     args = json.load(f)
 
 
-
-
 # t--tfcoil, s--saddlecoil, p--pfcoil
 nct, ncs, ncp = 12, 144, 12
 nst, nss, nsp = 99, 40, 99
-It = np.array([2.281852279e+07 for i in range(12)])
+It = np.array([2.696543822e+07 for i in range(12)])
 
 
-rt = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coiltf_12.npy')
-# rp = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coilpf_12.npy')
-rs = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coilsd_144.npy') 
-# Ip = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_Ip_12.npy')
-Is = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_3_11/coil_Is_144.npy')
+def read_makegrid_saddle(filename, nct, ncs, nst, nss):    
+    rt = np.zeros((nct, nst+1, 3))
+    rp = np.zeros((ncp, nsp+1, 3))
+    rs = np.zeros((ncs, nss+1, 3))
+    Ip = np.zeros((ncp, nsp+1))
+    Is = np.zeros((ncs, nss+1))
+    with open(filename) as f:
+        _ = f.readline()
+        _ = f.readline()
+        _ = f.readline()
+        for i in range(nct):
+            for s in range(nst+1):
+                x = f.readline().split()
+                rt = rt.at[i, s, 0].set(float(x[0]))
+                rt = rt.at[i, s, 1].set(float(x[1]))
+                rt = rt.at[i, s, 2].set(float(x[2]))
+        # for i in range(ncp):
+        #     for s in range(nsp+1):
+        #         x = f.readline().split()
+        #         rp = rp.at[i, s, 0].set(float(x[0]))
+        #         rp = rp.at[i, s, 1].set(float(x[1]))
+        #         rp = rp.at[i, s, 2].set(float(x[2]))
+        #         Ip = Ip.at[i, s].set(float(x[3]))
+        for i in range(ncs):
+            print(i)
+            for j in range(nss+1):
+                x = f.readline().split()
+                rs = rs.at[i, j, 0].set(float(x[0]))
+                rs = rs.at[i, j, 1].set(float(x[1]))
+                rs = rs.at[i, j, 2].set(float(x[2]))
+                Is = Is.at[i, j].set(float(x[3]))
+        x = f.readline().split()
+        print(x)
+    # Ip = Ip[:,1]
+    Is = Is[:,1]
+    return rt, rs, Is
+# rt, rs, Is = read_makegrid_saddle('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coils.dat', nct, ncs, nst, nss)
+rt = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coiltf_12.npy')
+# np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coilpf_12.npy', rp)
+rs = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coilsd_144.npy')
+# np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_Ip_12.npy', Ip)
+Is = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coil_Is_144.npy')
+
 
 print(np.max(abs(Is)))
 
@@ -61,14 +97,12 @@ fct = fourier.compute_coil_fourierSeries(nct, nst, nfc, rt)
 rt = rt[:, :-1, :]
 rs = rs[:, :-1, :]
 # rp = rp[:, :-1, :]
-thetas = np.linspace(0, 2 * np.pi, nss + 1)
-der1s = fourier.compute_der1(fcs, nfc, ncs, nss, thetas)
+der1s = fourier.compute_der1(fcs, nfc, ncs, nss)
 dls = der1s[:, :-1, :] * (2*np.pi/nss)
 # thetap = np.linspace(0, 2 * np.pi, nsp + 1)
 # der1p = fourier.compute_der1(fcp, 6, ncp, nsp, thetap)
 # dlp = der1p[:, :-1, :] * (2*np.pi/nsp)
-thetat = np.linspace(0, 2 * np.pi, nst + 1)
-der1t = fourier.compute_der1(fct, nfc, nct, nst, thetat)
+der1t = fourier.compute_der1(fct, nfc, nct, nst)
 dlt = der1t[:, :-1, :] * (2*np.pi/nst)
 
 # TF coil
@@ -101,8 +135,8 @@ dlt = der1t[:, :-1, :] * (2*np.pi/nst)
 
 # saddlecoil
 frs = np.zeros((2, ncs, args['number_fourier_rotate'])) 
-args['length_normal'] = [0.35 for i in range(144)]
-args['length_binormal'] = [0.35 for i in range(144)]
+args['length_normal'] = [0.6 for i in range(144)]
+args['length_binormal'] = [0.6 for i in range(144)]
 args['number_normal'] = 2
 args['number_binormal'] = 2
 args['number_coils'] = 144
@@ -154,14 +188,34 @@ def plot(args, params, B_coil):
     fig = go.Figure()
     for i in range(nic):
         fig.add_trace(go.Surface(x=xx[:,i,:], y=yy[:,i,:], z=zz[:,i,:], 
-                surfacecolor = B[:,i,:], cmin = cmin, cmax = cmax))
-    fig.update_layout(scene_aspectmode='data')
-    # fig.update_coloraxes(cmax = 15, cmin = 5.2, colorbar_title='我是colorbar')
+                surfacecolor = B[:,i,:], cmin = cmin, cmax = cmax,
+                colorbar_title='B_coil [T]',
+                colorbar = dict(x = 0.8,tickfont = dict(size=25))))
+    fig.update_layout(scene_aspectmode='data', coloraxis_showscale=True, scene = dict(
+                    xaxis = dict(
+                        #  backgroundcolor="white",
+                        #  gridcolor="white",
+                        title_text = "",
+                        showticklabels=False,
+                        showbackground=False,
+                        zerolinecolor="white",),
+                    yaxis = dict(
+                        # backgroundcolor="white",
+                        # gridcolor="white",
+                        title_text = "",
+                        showticklabels=False,
+                        showbackground=False,
+                        zerolinecolor="white"),
+                    zaxis = dict(
+                        # backgroundcolor="white",
+                        # gridcolor="white",
+                        title_text = "",
+                        showticklabels=False,
+                        showbackground=False,
+                        zerolinecolor="white",),))
 
     fig.show() 
     return 
-
-
 
 B_coil = np.linalg.norm(B_coil+Bother, axis=-1)
 print(np.max(B_coil))

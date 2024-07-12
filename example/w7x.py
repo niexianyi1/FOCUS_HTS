@@ -12,27 +12,47 @@ args = {
 ## 在保存hdf5文件时，不能有None的值
 ##   参数类别/参数名             参数值       简写    类型     解释
 
-# 优化器
+# 优化
+    # 优化目标
+    'coil_optimize':            1,          #       int,    是否优化线圈位置, 0为否, 1为是
+    'alpha_optimize':           0,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
+    'I_optimize':               0,          #       int,    是否优化电流, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'min',     #       str,    优化方式, 'for', 'min', 'for-min', 'min-for'
-    'number_iteration':         1000,        # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
-    'minimize_method':          'CG',   #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+    'iter_method':              'jax',     #       str,    优化方式, 'jax', 'min', 'nlopt', #'for-min', 'min-for'
+    
+    # 优化算法参数:minimize
+    'minimize_method':          'CG',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
     'minimize_tol':             1e-2,       # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
-                        
-    # 优化算法参数
+
+    # 优化算法参数:nlopt
+    'nlopt_algorithm':          'LD_MMA',     #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
+    'stop_criteria':             1e-4,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
+
+
+    # 优化算法参数:jax, 通过设置迭代步长是否为0可以控制优化
+    'number_iteration':         0,        # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
     'optimizer_coil':           'momentum', # (opt) str,    线圈参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'optimizer_fr':             'momentum', # (opt) str,    旋转参数迭代方法,  (sgd, gd, momentum, or adam)  
+    'optimizer_alpha':          'momentum', # (opt) str,    旋转参数迭代方法,  (sgd, gd, momentum, or adam)  
     'optimizer_I':              'momentum', # (opt) str,    电流参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'learning_rate_coil':       4e-6,       # (lrc) float,  参数coil_arg, 迭代步长, 为0则不优化                      
-    'learning_rate_fr':         1e-5,       # (lrfr)float,  参数fr, 迭代步长, 为0则不优化
-    'learning_rate_I':          1,          # (lrfr)float,  参数I, 迭代步长, 为0则不优化   
+    'step_size_coil':           1e-5,       #       float,  参数coil_arg, 迭代步长, 为0则不优化                      
+    'step_size_alpha':          1e-5,       #       float,  参数fr, 迭代步长, 为0则不优化
+    'step_size_I':              1,          #       float,  参数I, 迭代步长, 为0则不优化   
     'momentum_mass':            0.9,        # (mom) float,  梯度下降的动量参数
     'axis_resolution':          10,         # (res) int,    Resolution of the axis, multiplies NZ                        
     'var':                      0.999,      # adam优化方法的参数
     'eps':                      1e-8,       # adam优化方法的参数
-    
+
 # 线圈
+
+    # 线圈读取       
+    'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
+    'init_coil_option':         'fourier',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
+    'circle_coil_radius':       1.3,        #       float,  生成初始的线圈半径   
+    'coil_file_type':           'hdf5',      #       str,    初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
+    'init_coil_file':                       #       str,    初始线圈文件名
+            '/home/nxy/codes/coil_spline_HTS/results/w7x/w7x_hdf5.h5',       
+    'read_coil_segments':        64,        #       int,    文件中的线圈段数 
 
     # 线圈参数
     'number_coils':             50,         # (nc)  int,    线圈总数                    
@@ -40,36 +60,29 @@ args = {
     'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
     'number_independent_coils': 5,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
     'number_segments':          64,         # (ns)  int,    每个线圈分段数                     
-     
-
-    # 线圈读取       
-    'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
-    'init_coil_option':         'coil',     #       str,    初始线圈参数的来源, 'spline' or 'coil' or 'fourier' or 'circle'
-    'circle_coil_radius':       1.0,        #       float,  生成初始的线圈半径   
-    'coil_file_type':           'npy',      #       str,    初始线圈文件类型, 'npy' or 'makegrid', 后续可以再加
-    'init_coil_file':                       #       str,    初始线圈文件名
-            '/home/nxy/codes/coil_spline_HTS/initfiles/w7x/circle_coil_5.npy',       
+    
 
     # Fourier表示
-    'num_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
+    'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
                      
     # Bspline表示
     'number_control_points':    67,         # (ncp) int,    每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合                   
     'spline_k':                 3,          # (k)   int,    Bspline阶数,默认为3阶
 
     # Bspline局部优化
-    'optimize_location_nic':    [0,1],      #       list,   局部优化的线圈位置, 由列表给出进行局部优化的线圈是第几个, 第一个线圈从0开始   
+    'optimize_location_nic':    [0],      #       list,   局部优化的线圈位置, 由列表给出进行局部优化的线圈是第几个, 第一个线圈从0开始   
     'optimize_location_ns':                 #       list,   局部优化的线圈位置, 由列表给出每个进行局部优化的线圈的具体分段, 
-                [[[12, 23]], [[17, 26]]],               
+                [[[0, 64]]],               
         # 3阶列表，第一阶表示第几个线圈, 第二阶表示一个线圈中分成几段, 第三阶为每一段的起始与末尾点的位置
         # 此处第三阶的位置是实际的坐标位置, 不是控制点对应的节点区间, 每一项都为int
         # 同线圈不同段间距应大于3, 否则连在一起
 
     # 有限截面参数
-    'length_normal':            [0.08 for i in range(5)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
-    'length_binormal':          [0.08 for i in range(5)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
-    'number_normal':            1,          # (nn)  int,    有限截面下的法向线圈数量                     
-    'number_binormal':          1,          # (nb)  int,    有限截面下的副法向线圈数量                    
+    'length_calculate':         0,          #       int,    0：手动给出截面大小, 1：由超导线圈临界电流给出截面大小
+    'length_normal':            [0.16 for i in range(5)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
+    'length_binormal':          [0.16 for i in range(5)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
+    'number_normal':            2,          # (nn)  int,    有限截面下的法向线圈数量                     
+    'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量                    
                      
     # 旋转角参数
     'init_fr_case':             0,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
@@ -83,18 +96,16 @@ args = {
     # 电流初始
     'current_independent':      0,          #       int,    每个独立线圈是否拥有独立电流, 0:否, 1:是
     'current_I':                [1.62e6],      #       list,   线圈初始电流数值         
-
-    # 电流参数优化
-    'I_optimize':               1,          #       int,    是否优化线圈电流, 0为否, 1为是
-        # 通过设置迭代步长是否为0来控制电流优化
-    
+    'total_current_I':          0,          #       int,    电流优化时保持总电流不变, 
+        # 若为0, 则不设置总电流; 若不为0, 则为总电流数值
 
 # 磁面
     
     # 磁面参数
-    'number_theta':             32,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
-    'number_zeta':              128,        # (nz)  int,    磁面上\zeta(环向)的网格点数              
     'surface_case':             1,          #       int,    磁面数据来源, 0:直接读取文件, 1:计算vmec文件生成
+    'number_theta':             64,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
+    'number_zeta':              64,        # (nz)  int,    磁面上\zeta(环向)的网格点数              
+    
     
     # 计算磁面           
     'surface_vmec_file':                    #       str,    磁面数据的vmec文件
@@ -119,7 +130,7 @@ args = {
 
 # LTS/HTS材料
 
-    'HTS_material':             'REBCO_Other',    # str,    材料类型, REBCO_Other, NbTi, Nb3Sn    
+    'HTS_material':             'REBCO_LT',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
     'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 不包括相邻间隙
     'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 不包括相邻间隙
     'HTS_I_thickness':          1.2e-6,     #       float,  HTS材料导电层厚度
@@ -131,22 +142,26 @@ args = {
 # loss function 目标和权重
 
     'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
-    'weight_length':            1e-3,          # (wl)  float,  单根线圈平均长度 
-    'weight_curvature':         0,          # (wc)  float,  曲率 
-    'weight_curvature_max':     0,          # (wcm) float,  最大曲率
-    'weight_torsion':           0,          # (wt)  float,  扭转 
-    'weight_torsion_max':       0,          # (wtm) float,  最大扭转
-    'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
-    'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
+    'weight_length':            0.1,          # (wl)  float,  单根线圈平均长度 
+    'weight_curvature':         4e-5,          # (wc)  float,  曲率 
+    'weight_curvature_max':     0.01,          # (wcm) float,  最大曲率
+    'weight_torsion':           4e-5,          # (wt)  float,  扭转 
+    'weight_torsion_max':       0.01,          # (wtm) float,  最大扭转
+    'weight_distance_coil_coil':    0.001,      # (wdcc)float,  线圈间距 
+    'weight_distance_coil_surface': 0.001,      # (wdcs)float,  线圈与磁面距离 
     'weight_strain':            0,          #       float,  应变量
+    'weight_force':             0,          # (wf)  float,  线圈受自场力  
+    'weight_jcrit':             0,          #       float,  线圈自场与线圈表面夹角   
+
 
     #  target 不为0则采取差值平方的loss
-    'target_length':            0,          #       float,  目标长度, 
-    'target_curvature_max':     0,          #       float,  目标最大曲率
-    'target_torsion_max':       0,          #       float,  目标最大扭转
-    'target_distance_coil_coil':    10,      #       float,  目标最大线圈间距
-    'target_distance_coil_surface': 10,      #       float,  目标最大线圈与磁面距离
-    'target_strain':            0.004,          #       float,  目标最大应变
+    'target_length':            8.5,          #       float,  目标长度, 
+    'target_curvature_max':     2.36,          #       float,  目标最大曲率
+    'target_torsion_max':       5,          #       float,  目标最大扭转
+    'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
+    'target_distance_coil_surface': 0.44,      #       float,  目标最大线圈与磁面距离
+    'target_strain':            0.0039,          #       float,  目标最大应变
+    #'target_force':             1,            #       float, 目标最大受力
 
 # 画图
 
@@ -167,13 +182,13 @@ args = {
 # 程序输出
 
     # 输出选项,  0：不保存, 1：保存, 
-    'save_npy' :                1,          #       int,    保存npy文件, 仅限被优化参数和loss值
-    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
-    'save_makegrid' :           1,          #       int,    保存线圈makegrid文件
+    'save_npy' :                0,          #       int,    保存npy文件, 仅限被优化参数和loss值
+    'save_hdf5' :               0,          #       int,    保存hdf5文件, 包含所有参数(大部分)
+    'save_makegrid' :           0,          #       int,    保存线圈makegrid文件
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        '/home/nxy/codes/coil_spline_HTS/results/w7x/compare/filameat/hdf5.h5',        
+        '/home/nxy/codes/coil_spline_HTS/results/w7x/w7x.h5',        
     'out_coil_makegrid':                    #       str,    makegrid , 输出线圈
         '/home/nxy/codes/coil_spline_HTS/results/w7x/compare/filameat/makegrid',                
     'save_loss':                            #       str,    npy, 输出损失函数值(lossvals)

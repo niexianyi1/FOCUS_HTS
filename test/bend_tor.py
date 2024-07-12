@@ -61,7 +61,7 @@ def compute_coil_centroid(args, coil_arg):
 
     """     
     if args['coil_case'] == 'fourier':        
-        coil_centroid = fourier.compute_r_centroid(coil_arg, args['num_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
+        coil_centroid = fourier.compute_r_centroid(coil_arg, args['number_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
         coil_centroid = coil_centroid[:, :-1, :]
     if args['coil_case'] == 'spline':
         t, u, k = args['bc']
@@ -82,9 +82,9 @@ def compute_der(args, coil_arg):
 
     """   
     if args['coil_case'] == 'fourier':          
-        der1 = fourier.compute_der1(coil_arg, args['num_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
-        der2 = fourier.compute_der2(coil_arg, args['num_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
-        der3 = fourier.compute_der3(coil_arg, args['num_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
+        der1 = fourier.compute_der1(coil_arg, args['number_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
+        der2 = fourier.compute_der2(coil_arg, args['number_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
+        der3 = fourier.compute_der3(coil_arg, args['number_fourier_coils'], args['number_independent_coils'], args['number_segments'], args['theta'])
         der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
     if args['coil_case'] == 'spline':
         t, u, k = args['bc']
