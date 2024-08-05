@@ -16,7 +16,7 @@ import save
 config.update("jax_enable_x64", True)
 config.update('jax_disable_jit', True)
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -89,7 +89,7 @@ def compute_grad(args, gradient):
 loss_vals = []
 n = 0
 start = time.time()
-args['out_hdf5'] = '/home/nxy/codes/coil_spline_HTS/results/w7x/w7x_start/spline3.h5'
+args['out_hdf5'] = 'results/w7x/w7x_start/spline3.h5'
 
 opt_init_coil_arg, opt_update_coil_arg, get_params_coil_arg = read_init.args_to_op(
     args, args['optimizer_coil'], args['step_size_coil'])
@@ -120,7 +120,7 @@ n = 0
 start = time.time()
 args['coil_case']='fourier'
 args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args) 
-args['out_hdf5'] = '/home/nxy/codes/coil_spline_HTS/results/w7x/w7x_start/fourier3.h5'
+args['out_hdf5'] = 'results/w7x/w7x_start/fourier3.h5'
 params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
 opt = nlopt.opt(nlopt.LD_MMA, len(params))
 opt.set_min_objective(objective_function_nlopt)

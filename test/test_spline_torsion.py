@@ -7,18 +7,18 @@ import json
 import plotly.graph_objects as go
 import scipy.interpolate as si
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import spline
 import fourier
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
 
 nic, ns, ncp, nfc = 1, 64, 67, 6
 ## xyz坐标
-coil = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/w7x/w7x_coil_5.npy')[0]
+coil = np.load('initfiles/w7x/w7x_coil_5.npy')[0]
 coil = coil[np.newaxis,:,:]
 
 ## fourier挠率

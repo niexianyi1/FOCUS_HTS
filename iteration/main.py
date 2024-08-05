@@ -14,7 +14,7 @@ import lossfunction
 import plot
 import save
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/HTS')
+sys.path.append('HTS')
 import hts_strain
 config.update("jax_enable_x64", True)
 config.update('jax_disable_jit', True)
@@ -23,13 +23,13 @@ n = 0
 
 def main():
     
-    with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+    with open('initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
     
     # 获取初始数据
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
-    np.save('/home/nxy/codes/coil_spline_HTS/initfiles/hsx/fc.npy', coil_arg_init)
+
     # loss计算准备
     # coil_cal = CoilSet(args)
     # args = coil_cal.get_fb_args(params)  
@@ -84,7 +84,7 @@ def main():
         loss_val = numpy.float64(loss_val)    
         loss_vals.append(loss_val)
         print('iter = ', n, 'value = ', loss_val)
-        return  loss_val
+        return loss_val
 
     def constrain_nlopt(params, grad):
         params = list_to_params(params)   
@@ -104,9 +104,15 @@ def main():
     @jit
     def list_to_params(params):
         nic = args['number_independent_coils']
-        fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] - nic+1:-nic+1],
-                            (2, nic, args['number_fourier_rotate']))   
-        I = params[-nic+1:]
+        if nic!=1:
+            fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] - nic+1:-nic+1],
+                                (2, nic, args['number_fourier_rotate']))   
+            I = params[-nic+1:]
+        else:
+            fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] :],
+                                (2, nic, args['number_fourier_rotate']))   
+            I = np.array([])
+
         def coil_arg_fourier(args, params, nic):
             return np.reshape(params[:6 * nic * args['number_fourier_coils']], 
                                 (6, nic, args['number_fourier_coils']) )
@@ -180,7 +186,12 @@ def main():
         params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
         opt = read_init.nlopt_op(args, params)
         opt.set_min_objective(objective_function_nlopt)
-        # opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
+        if args['inequality_constraint'] == 'strain':
+            opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
+        # if args['weight_HTS_strain'] != 0:
+        #     opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
+        # if args['weight_distance_coil_coil'] != 0:
+        #     opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
         opt.set_ftol_rel(args['stop_criteria'])
         xopt = opt.optimize(params)
         print('loss = ', opt.last_optimum_value())  
@@ -188,7 +199,7 @@ def main():
 
 
 
-    # elif args['iter_method'] == 'for-min':
+    ''' # elif args['iter_method'] == 'for-min':
     #     opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
     #     opt_state_fr = opt_init_fr(fr_init)  
     #     opt_state_I = opt_init_I(I_init)  
@@ -227,7 +238,7 @@ def main():
     #         print(loss_val)
     #     params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
     #                 get_params_I(opt_state_I))
-
+    '''
 
     end = time.time()
     print('time cost = ', end - start)

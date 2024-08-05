@@ -4,7 +4,7 @@ import material_jcrit
 import hts_strain
 import B_self
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import coilset  
 
 
@@ -20,6 +20,7 @@ def solve_section(args, coil_arg_init, fr_init, I_init):
     length = np.array([newlen, param])
     args['length_normal'] = np.max(length, axis=0)
     args['length_binormal'] = np.max(length, axis=0)
+    print(args['length_binormal'])
     return args
 
 
@@ -39,8 +40,9 @@ def compute_section(args, B_self_input):
     coil, I, dl, v1, v2, binormal, curva, der2 = B_self_input
     I = I * args['I_normalize']
     curva = 3 * curva   ### 这里手动给了一个倍率
-    strain_max = hts_strain.HTS_strain(args, curva, v1, dl)
-    B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva) 
+    strain = hts_strain.HTS_strain(args, curva, v1, dl)
+    strain_max = np.max(strain)
+    B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
     B_self_max = np.max(np.linalg.norm(B_coil, axis=-1), axis = (1,2))
     jc = Jcrit(args, B_self_max, strain_max)
     n_total = (I / jc / args['HTS_I_percent'] / args['HTS_structural_percent'])
@@ -55,7 +57,7 @@ def Jcrit(args, B_self, strain):
     Bc = np.zeros((nic))
     for i in range(nic):
         j,b,t = material_jcrit.get_critical_current(args['HTS_temperature'],
-                        B_self[i], strain, args['HTS_material'])
+                        B_self[i], strain, args['material'])
         jc = jc.at[i].set(j)
         Bc = Bc.at[i].set(b)
     assert B_self.all() < np.min(Bc)

@@ -8,7 +8,7 @@ from jax import value_and_grad, jit
 from jax.config import config
 import scipy.interpolate as si 
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
 import spline
 import read_init
@@ -18,7 +18,7 @@ config.update("jax_enable_x64", True)
 pi = np.pi
 
     
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -49,7 +49,7 @@ for i in range(6):
             dloss = dloss.at[i,j,k].set((value1-value0)/(d*coil_arg_init[i, j, k]))
                 
 
-gbc = np.load("/home/nxy/codes/coil_spline_HTS/results/grad/loss_f_bn_arg.npy")
+gbc = np.load("results/grad/loss_f_bn_arg.npy")
 
 print('(db-gc)/db = ', (dloss-gbc)/dloss)
 print('mean = ', np.mean((dloss-gbc)/dloss))

@@ -9,20 +9,11 @@ import jax.numpy as np
 
 
 def save_file(args, loss_vals, coil_all, loss_end, surface_data):
-    if args['save_npy'] != 0:
-        save_npy(args, coil_all, loss_vals)
     if args['save_hdf5'] != 0: 
         save_hdf5(args, coil_all, loss_end, surface_data, loss_vals)
     if args['save_makegrid'] != 0:
         save_makegrid(args, coil_all)
     return
-    
-def save_npy(args, coil_all, loss_vals):
-    np.save('{}'.format(args['save_loss']), loss_vals)
-    np.save('{}'.format(args['save_coil_arg']), coil_all['coil_arg'])
-    np.save('{}'.format(args['save_fr']), coil_all['coil_fr'])
-    return
-
 
 
 def save_hdf5(args, coil_all, loss_end, surface_data, loss_vals):     # 根据需求写入数据

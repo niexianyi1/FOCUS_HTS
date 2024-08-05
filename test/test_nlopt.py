@@ -5,11 +5,11 @@ import numpy
 from jax import value_and_grad
 import nlopt 
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
 pi = np.pi
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 

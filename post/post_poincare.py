@@ -117,15 +117,15 @@ def plot_poincare_compare(arge,old_arge):
 
     return
 
-filename = '/home/nxy/codes/coil_spline_HTS/results/w7x/w7x.h5'
-oldline = '/home/nxy/codes/coil_spline_HTS/results/poincare/w7x.npy'
+filename = 'results/w7x/w7x.h5'
+oldline = 'results/poincare/w7x.npy'
 arge = read_hdf5(filename)
 arge['poincare_number'] = 15
 arge['number_iter'] = 200
 plot_poincare(arge, oldline)
 
 # compare
-# oldfile = '/home/nxy/codes/coil_spline_HTS/results/poincare/hsx.npy'
+# oldfile = 'results/poincare/hsx.npy'
 # old_arge = read_hdf5(oldfile)
 # plot_poincare_compare(arge,old_arge)
 

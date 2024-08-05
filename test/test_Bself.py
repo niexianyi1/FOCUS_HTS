@@ -6,13 +6,13 @@ import plotly.graph_objects as go
 import h5py
 from test_coil_cal import CoilSet
 import sys 
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
-sys.path.append('/home/nxy/codes/coil_spline_HTS/HTS')
+sys.path.append('HTS')
 import B_self
 
 pi = np.pi
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -25,9 +25,8 @@ args['number_fourier_coils'] = 17
 
 fr = np.zeros((2, nc, args['number_fourier_rotate'])) 
 theta = np.linspace(0, 2 * np.pi, ns + 1)
-fc = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/hsx/Bself_hsx_fc.npy')[:, 0, :]
+fc = np.load('initfiles/hsx/Bself_hsx_fc.npy')[:, 0, :]
 fc = fc[:, np.newaxis, :]
-print(fc.shape)
 rc = fourier.compute_r_centroid(fc, 17, nc, ns)
 coil = rc[:, :-1, :]
 
@@ -53,10 +52,15 @@ coil_cal = CoilSet(args)
 
 
 # circle
-# I = 1e6
-# params = (fc, fr, I)
-# coil, dl, normal, binormal, curva = coil_cal.get_args_sec_circle(params)
-# B_coil = B_self.coil_B_section_circle(args, coil, I, dl, normal, binormal, curva)
+I = 1e6
+params = (fc, fr, I)
+coil, dl, normal, binormal, curva = coil_cal.get_args_sec_circle(params)
+B_coil, Breg = B_self.coil_B_section_circle(args, coil, I, dl, normal, binormal, curva)
+
+tangent = dl[0] / np.linalg.norm(dl[0], axis=-1)[:, np.newaxis]
+force = I * np.cross(tangent, Breg)
+print(force)
+
 # r = len/2/np.pi/100
 # fig = go.Figure(data=
 #     go.Contour(
@@ -74,25 +78,25 @@ coil_cal = CoilSet(args)
 
 
 # square
-I = 1.5e5
-params = (fc, fr, I)
-coil, dl, normal, binormal, v1, v2, curva, sec = coil_cal.get_args_sec_square(params)
-curva = np.linalg.norm(curva[0,0])
-tangent = dl[0,0] / np.linalg.norm(dl[0,0])
+# I = 1.5e5
+# params = (fc, fr, I)
+# coil, dl, normal, binormal, v1, v2, curva, sec = coil_cal.get_args_sec_square(params)
+# curva = np.linalg.norm(curva[0,0])
+# tangent = dl[0,0] / np.linalg.norm(dl[0,0])
+# B_coil, Breg = B_self.coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva)
+# print(B_coil)
+# tangent = dl[0] / np.linalg.norm(dl[0], axis=-1)[:, np.newaxis]
+# force = I * np.cross(tangent, Breg)
+# print(force)
 
-print('coil = ', coil[0,0])
-print('dl = ', dl[0,0])
-print('tangent = ', tangent)
-print('normal = ', normal[0,0])
-print('binormal = ', binormal[0,0])
-print('curva = ', curva)
-print('v1 = ', v1[0,0])
-print('v2 = ', v2[0,0])
-
-
-B_coil = B_self.coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva)
-np.save('/home/nxy/codes/coil_spline_HTS/B.npy', B_coil)
-print(B_coil)
+fig = go.Figure()
+fig.add_scatter(x = np.arange(0, 200, 1), y = force[:, 0], 
+                    name = 'lossvalue', line = dict(width=5))
+fig.update_xaxes(title_text = "iteration",title_font = {"size": 25},title_standoff = 12, 
+                    tickfont = dict(size=25))
+fig.update_yaxes(title_text = "lossvalue",title_font = {"size": 25},title_standoff = 12, 
+                    tickfont = dict(size=25) )
+fig.show()
 
 fig = go.Figure(data=
     go.Contour(

@@ -31,6 +31,7 @@ def read_makegrid(filename, nic, ns):
 
     """
     coordinates = np.zeros((nic, ns+1, 3))
+    I = np.zeros((nic))
     with open(filename) as f:
         _ = f.readline()
         _ = f.readline()
@@ -41,9 +42,10 @@ def read_makegrid(filename, nic, ns):
                 coordinates = coordinates.at[i, s, 0].set(float(x[0]))
                 coordinates = coordinates.at[i, s, 1].set(float(x[1]))
                 coordinates = coordinates.at[i, s, 2].set(float(x[2]))
+            I = I.at[i].set(float(x[3]))
             _ = f.readline()
     coordinates = coordinates.at[:, -1, :].set(coordinates[:, 0, :])
-    return coordinates
+    return coordinates, I
 
 
 
@@ -132,12 +134,12 @@ def read_plasma(args):
 
     R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_vmec_file']))
     r, nn, sg = get_plasma_boundary(R, Z, args['number_zeta'], args['number_theta'], Nfp, MT, MZ)
-    args['number_field_periods'] = Nfp
+    # args['number_field_periods'] = Nfp
     return args, r, nn, sg 
 
 
 
-def read_finite_beta(args):
+def read_finite_beta_Bn(args):
     filename = args['Bn_extern_file']
     with open(filename) as f:
         _ = f.readline()
@@ -150,12 +152,12 @@ def read_finite_beta(args):
         MZ = n
         MT = int(nbf/(2*MZ+1))
         BNC, BNS = numpy.zeros((2*MZ+1, MT)), numpy.zeros((2*MZ+1, MT))
-        BNC[n+MZ, m], BNS[n+MZ, m] = float(bnc), float(bns)
+        BNS[n+MZ, m] = float(bns)
         for i in range(nbf-1):
-            n, m, bnc, bns = f.readline().split()
+            n, m, _, bns = f.readline().split()
             n, m = int(n), int(m)
-            BNC[n+MZ, m], BNS[n+MZ, m] = float(bnc), float(bns)
-    zeta = np.linspace(0,2 * np.pi, args['number_zeta'] + 1)[:-1]
+            BNS[n+MZ, m] = float(bns)
+    zeta = np.linspace(0, 2 * np.pi, args['number_zeta'] + 1)[:-1]
     theta = np.linspace(0, 2 * np.pi, args['number_theta'] + 1)[:-1]
     Bn = np.zeros((args['number_zeta'], args['number_theta']))
     for mz in range(-MZ, MZ + 1):

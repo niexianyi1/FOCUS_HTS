@@ -3,15 +3,15 @@ import jax.numpy as np
 import json
 import sys 
 import plotly.graph_objects as go
-# sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+# sys.path.append('iteration')
 import read_plasma
 
 
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 
-file = '/home/nxy/codes/coil_spline_HTS/initfiles/hsx/plasma.boundary'
+file = 'initfiles/hsx/plasma.boundary'
 nz, nt = 64, 64
 R, Z, Nfp, MT, MZ = read_plasma.read_plasma_boundary("{}".format(file))
 r_surf, NN, sg = read_plasma.get_plasma_boundary(R, Z, nz, nt, Nfp, MT, MZ)
@@ -56,7 +56,7 @@ def circle_coil(args, surface):
     return circlecoil
 
 coil = circle_coil(args, r_surf)
-np.save('/home/nxy/codes/coil_spline_HTS/initfiles/hsx/circle_coils.npy',coil)
+np.save('initfiles/hsx/circle_coils.npy',coil)
 coil = np.reshape(coil, (65*6, 3))
 fig = go.Figure()
 fig.add_scatter3d(x=coil[:, 0],y=coil[:, 1],z=coil[:, 2], name='new_coil', mode='markers', marker_size = 1.5)   

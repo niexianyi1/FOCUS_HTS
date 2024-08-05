@@ -11,7 +11,7 @@ import read_file
 import coilset
 import nlopt
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/HTS')
+sys.path.append('HTS')
 import section_length
 
 def init(args):
@@ -133,18 +133,23 @@ def coil_init(args, surface_data):
             c_init :    array, [nic, ncp-3], spline表示的初始参数, 不包含重复的控制点。
         fr_init :       array, [2, nic, nfr], 有限截面旋转的初始数据
     """    
-    assert args['number_independent_coils'] * args['number_field_periods'] *(args['stellarator_symmetry'] + 1) == args['number_coils'] 
-                      
     
     nic = args['number_independent_coils']
     ns = args['number_segments']
+    assert nic * args['number_field_periods'] * (args['stellarator_symmetry'] + 1) == args['number_coils'] 
+    
     surface, _, _ = surface_data
     
     ## 有限截面旋转角
     if args['init_fr_case'] == 0:
         fr_init = np.zeros((2, nic, args['number_fourier_rotate'])) 
     elif args['init_fr_case'] == 1:
-        fr_init = np.load("{}".format(args['init_fr_file']))
+        if args['fr_file_type'] == 'npy':
+            fr_init = np.load("{}".format(args['init_fr_file']))
+        if args['fr_file_type'] == 'hdf5':
+            arge = read_file.read_hdf5("{}".format(args['init_fr_file']))
+            fr_init = np.array(arge['coil_fr'])
+
 
     ## 总变量
     if args['coil_case'] == 'fourier':
@@ -159,7 +164,7 @@ def coil_init(args, surface_data):
             if args['coil_file_type'] == 'npy':
                 coil = np.load("{}".format(args['init_coil_file']))
             if args['coil_file_type'] == 'makegrid':
-                coil = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])
+                coil, I_init = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])
             fc_init = fourier.compute_coil_fourierSeries(nic, args['read_coil_segments'], args['number_fourier_coils'], coil)
 
         elif args['init_coil_option'] == 'circle':
@@ -183,7 +188,7 @@ def coil_init(args, surface_data):
             if args['coil_file_type'] == 'npy':
                 coil = np.load("{}".format(args['init_coil_file']))
             if args['coil_file_type'] == 'makegrid':
-                coil = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
+                coil, I_init = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
             c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
 
         elif args['init_coil_option'] == 'circle':
@@ -209,7 +214,7 @@ def coil_init(args, surface_data):
             if args['coil_file_type'] == 'npy':
                 coil = np.load("{}".format(args['init_coil_file']))
             if args['coil_file_type'] == 'makegrid':
-                coil = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
+                coil, I_init = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
             c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
         args['bc'] = bc
         args['tj'] = tj
@@ -292,7 +297,7 @@ def get_finite_build_length(args, coil_arg_init, fr_init, I_init):
 
 def get_Bn_extern(args):
     if args['Bn_extern'] == 1:
-        Bn = read_file.read_finite_beta(args)    
+        Bn = read_file.read_finite_beta_Bn(args)    
         args['Bn_extern_surface'] = Bn
     return args
 
@@ -314,10 +319,6 @@ def test(args, coil_arg_init):
             args['step_size_I'] = 0
         else:
             assert args['step_size_I'] != 0  
-
-    ## 线圈数量要对应
-    nic = args['number_independent_coils']
-    assert args['number_coils'] == args['number_field_periods'] * (args['stellarator_symmetry'] + 1) * nic
     
     ## fourier系数和spline系数
     if args['coil_case'] == 'fourier':
@@ -329,8 +330,8 @@ def test(args, coil_arg_init):
     nlen = np.max(np.array(args['length_normal'])) * (args['number_normal'] - 1)
     blen = np.max(np.array(args['length_binormal'])) * (args['number_binormal'] - 1)
     max_len = np.sqrt(nlen**2 + blen**2)
-    assert args['target_distance_coil_coil'] > max_len
-    assert args['target_distance_coil_surface'] > max_len / 2
+    assert args['target_distance_coil_coil'] > max_len or args['target_distance_coil_coil'] == 0
+    assert args['target_distance_coil_surface'] > max_len/2 or args['target_distance_coil_surface'] == 0
     
     print('Complete test.')
     return args

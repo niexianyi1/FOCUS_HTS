@@ -6,9 +6,9 @@ import jax.numpy as np
 import plotly.graph_objects as go
 import json
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
@@ -131,7 +131,7 @@ def circle_coil(args, surface):
 
     return circlecoil, axis
 
-file = '/home/nxy/codes/coil_spline_HTS/initfiles/hsx/plasma.boundary'
+file = 'initfiles/hsx/plasma.boundary'
 nz = 128
 nt = 64
 

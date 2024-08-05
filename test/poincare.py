@@ -118,5 +118,5 @@ def symmetry(r):
 # r0 = [ 5.9]
 # z0 = [ 0]
 bc = bspline.get_bc_init(67)
-# c = np.load('/home/nxy/codes/coil_spline_HTS/results/circle/c_100b.npy')
+# c = np.load('results/circle/c_100b.npy')
 # poincare(r0, z0, bc, c)

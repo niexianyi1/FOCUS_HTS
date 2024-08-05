@@ -79,7 +79,7 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
         fig = go.Figure()
         fig.add_scatter3d(x=coil[:, 0],y=coil[:, 1],z=coil[:, 2], name='coil', mode='markers', marker_size = 1.5)   
         fig.update_layout(scene_aspectmode='data')
-        fig.show()
+
 
     if args['plot_coil'] == 11 :
         coil = np.reshape(coil[:nic], (ns * nic * nn * nb, 3))
@@ -92,7 +92,7 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
         fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2] ))
         fig.update_layout(scene_aspectmode='data')
         fig.add_scatter3d(x=coil[:, 0],y=coil[:, 1],z=coil[:, 2], name='coil', mode='markers', marker_size = 1.5)   
-        fig.show()
+
 
     if args['plot_coil'] == 2 :
 
@@ -114,7 +114,7 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
         for i in range(nic):
             fig.add_trace(go.Surface(x=xx[:,i,:], y=yy[:,i,:], z=zz[:,i,:]))
         fig.update_layout(scene_aspectmode='data')
-        fig.show() 
+
 
     if args['plot_coil'] == 21 :
         rs,_,_ =  surface_data
@@ -155,9 +155,9 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
 
 
         fig = go.Figure()
-        # fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2],
-        #         surfacecolor = Bs, colorbar_title='B_coil [T]', 
-        #         colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="Viridis" ))
+        fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2],
+                surfacecolor = Bs, colorbar_title='B_coil [T]', 
+                colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="Viridis" ))
         for i in range(nic):
             fig.add_trace(go.Surface(x=xx[:,i,:], y=yy[:,i,:], z=zz[:,i,:], 
                 surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
@@ -167,7 +167,7 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
             xaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
             yaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
             zaxis = dict(title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white")))
-        fig.show() 
+    fig.show() 
     return 
 
 
@@ -233,8 +233,7 @@ def plot_poincare(args, coil_all, surface_data):
     fig.add_scatter(x = line[:, 0], y = line[:, 1],  name='poincare', mode='markers', marker_size = 1.5)
     fig.add_scatter(x = surf[:, 0], y = surf[:, 2],  name='surface', line = dict(width=2.5))
     fig.update_layout(scene_aspectmode='data')
-    fig.show()
-
+    fig.show() 
     return
 
 

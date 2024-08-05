@@ -12,7 +12,7 @@ def coil_self_B(args, coil, I, dl, v1, v2, binormal, curva, der2):
     I_nic = I[:nic, np.newaxis, np.newaxis]
     curva = np.linalg.norm(curva, axis=-1)
 
-    # if args['HTS_material'] == 'NbTi' or args['HTS_material'] == 'Nb3Sn':
+    # if args['material'] == 'NbTi' or args['material'] == 'Nb3Sn':
     #     a = args['HTS_width'] / 2
     #     Bother = B_other(args, I, coil, dl, nic, ns)
     #     Breg = B_reg_cir(I, coil, dl, a, nic, ns)
@@ -128,7 +128,7 @@ def coil_self_B_max(args, coil, I, dl, v1, v2, binormal, curva, der2):
     I_nic = I[:nic, np.newaxis, np.newaxis]
     curva = np.linalg.norm(curva, axis=-1)[:, :, np.newaxis]
 
-    # if args['HTS_material'] == 'NbTi' or args['HTS_material'] == 'Nb3Sn':
+    # if args['material'] == 'NbTi' or args['material'] == 'Nb3Sn':
     #     a = args['length_normal'] * (args['number_normal'] - 1) / 2
     #     Bother = B_other(args, I, coil, dl, nic, ns)
     #     Breg = B_reg_cir(I, coil, dl, a, nic, ns)
@@ -235,9 +235,9 @@ def coil_B_section_circle(args, coil, I, dl, v1, v2, curva):
             B_self = Breg + Blocal
             B_self = np.linalg.norm(B_self)
             B = B.at[i,j].set(B_self)
+    Breg = B_reg_circle(I, coil, dl, a)
 
-
-    return B
+    return B, Breg
 
 
 def coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva): 
@@ -250,8 +250,6 @@ def coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva):
     b = np.array([0.0568])
     k1 = curva * np.dot(binormal,v2)
     k2 = -curva * np.dot(binormal,v1)
-    print('k1 = ', k1)
-    print('k2 = ', k2)
 
     k = (4*b/(3*a)*np.arctan(a/b) + 4*a/(3*b)*np.arctan(b/a) + b**2/(6*a**2)*np.log(b/a)+
             a**2/(6*b**2)*np.log(a/b) - (a**4-6*(a*b)**2+b**4)/(6*(a*b)**2)*np.log(a/b+b/a) )
@@ -272,8 +270,6 @@ def coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva):
 
     Breg = B_reg_s(I, coil, dl, a, b, delta)[0]
     Bb = B_b(I, curva, binormal, delta)
-    print('Breg = ', Breg)
-    print('Bb = ', Bb)
     B = np.zeros((64,65))
     almost_one = 1 - (1e-6)
     for i in range(64):
@@ -287,8 +283,8 @@ def coil_B_section_square(args, coil, I, dl, v1, v2, binormal, curva):
             B_self = Bk + B0 + Breg + Bb
             B_self = np.linalg.norm(B_self)
             B = B.at[i,j].set(B_self)
-
-    return B
+    Breg = B_reg_s(I, coil, dl, a, b, delta)
+    return B, Breg
 
 
 def B_other(args, I, coil, dl, nic, ns):     # failment近似看一下结果

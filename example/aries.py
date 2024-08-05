@@ -3,7 +3,7 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import main
 # 待添加：电流优化项, 磁面数据生成
 args = {
@@ -49,7 +49,7 @@ args = {
     'init_coil_option':         'coil',     #       str,    初始线圈参数的来源, 'spline' or 'coil' or 'fourier'
     'file_type':                'npy',      #       str,    初始线圈文件类型, 'npy' or 'makegrid', 后续可以再加
     'init_coil_file':                       #       str,    初始线圈文件名
-            '/home/nxy/codes/coil_spline_HTS/initfiles/qas/coils_3.npy',       
+            'initfiles/qas/coils_3.npy',       
 
     # Fourier表示
     'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
@@ -76,7 +76,7 @@ args = {
     # 旋转角参数
     'init_fr_case':             0,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
     'init_fr_file':                         #       str,    给出变量fr的初始值文件
-            '/home/nxy/codes/coil_spline_HTS/results_f/circle/s1_fr.npy',
+            'results_f/circle/s1_fr.npy',
     'number_rotate':            0,          # (nr)  int,    描述线圈绕组组的半旋转数的整数,通常设为0                    
     'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数                  
    
@@ -100,16 +100,16 @@ args = {
     
     # 计算磁面           
     'surface_vmec_file':                    #       str,    磁面数据的vmec文件
-            '/home/nxy/codes/coil_spline_HTS/initfiles/jpark/plasma3.boundary',
+            'initfiles/jpark/plasma3.boundary',
 
     
     # 读取磁面数据
     'surface_r_file':                       #       str,    磁面坐标文件
-            '/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_r_surf.npy',
+            'initfiles/w7x/highres_r_surf.npy',
     'surface_nn_file':                      #       str,    磁面法向文件
-            '/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_nn_surf.npy',
+            'initfiles/w7x/highres_nn_surf.npy',
     'surface_sg_file':                      #       str,    磁面面积文件
-            '/home/nxy/codes/coil_spline_HTS/initfiles/w7x/highres_sg_surf.npy',
+            'initfiles/w7x/highres_sg_surf.npy',
 
 # 背景磁场
 
@@ -117,7 +117,7 @@ args = {
 
 # LTS/HTS材料
 
-    'HTS_material':             'Nb3Sn',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
+    'material':             'Nb3Sn',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
     'HTS_width':                0.04,      # (w)   float,  HTS材料总宽度 或 LTS材料直径
     'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 包括相邻间隙
     'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 包括相邻间隙
@@ -137,7 +137,7 @@ args = {
     'weight_torsion_max':       0,       # (wtm) float,  最大扭转
     'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
     'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
-    'weight_strain':            0,
+    'weight_HTS_strain':            0,
 
 
 # 画图
@@ -168,21 +168,21 @@ args = {
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        '/home/nxy/codes/coil_spline_HTS/results_f/arise/n3are/hdf5.h5',        
+        'results_f/arise/n3are/hdf5.h5',        
     'out_coil_makegrid':                    #       str,    makegrid , 输出线圈
-        '/home/nxy/codes/coil_spline_HTS/results_f/circle/w7x_makegrid',                
+        'results_f/circle/w7x_makegrid',                
     'save_loss':                            #       str,    npy, 输出损失函数值(lossvals)
-        '/home/nxy/codes/coil_spline_HTS/results_f/circle/w7x_loss.npy',         
+        'results_f/circle/w7x_loss.npy',         
     'save_coil_arg':                        #       str,    npy, 输出优化线圈参数(coil_arg)
-        '/home/nxy/codes/coil_spline_HTS/results_f/arise/w7x_coil_arg.npy',
+        'results_f/arise/w7x_coil_arg.npy',
     'save_fr':                              #       str,    npy, 输出优化旋转参数(fr)
-        '/home/nxy/codes/coil_spline_HTS/results_f/circle/w7x_fr.npy'
+        'results_f/circle/w7x_fr.npy'
     
 }
 
 
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'w') as f:
+with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 

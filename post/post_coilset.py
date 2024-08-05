@@ -1,12 +1,13 @@
 import jax.numpy as np
 from jax import jit, vmap, config
-
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
 import spline
 import lossfunction
+sys.path.append('HTS')
 import B_self
+import hts_strain
 config.update("jax_enable_x64", True)
 pi = np.pi
 
@@ -344,8 +345,8 @@ class CoilSet:
         _, N, B = frame
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
-        v1 = calpha[:, :, np.newaxis] * N - salpha[:, :, np.newaxis] * B
-        v2 = salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
+        v1 = calpha[:, :, np.newaxis] * N + salpha[:, :, np.newaxis] * B
+        v2 = - salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
         return v1, v2
 
 
@@ -355,14 +356,14 @@ class CoilSet:
         salpha = np.sin(alpha)
         dv1_dt = (
             calpha[:, :, np.newaxis] * dNdt
-            - salpha[:, :, np.newaxis] * dBdt
+            + salpha[:, :, np.newaxis] * dBdt
             - salpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
-            - calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
+            + calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         dv2_dt = (
             salpha[:, :, np.newaxis] * dNdt
             + calpha[:, :, np.newaxis] * dBdt
-            + calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
+            - calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
             - salpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         return dv1_dt, dv2_dt
@@ -467,6 +468,20 @@ class CoilSet:
         return r
 
 
+    def get_plot_strain(self, params):
+        coil_arg, fr, I = params  
+        if self.args['coil_case'] == 'spline_local':
+            coil_arg = CoilSet.local_coil(self, self.args['c_init'])
+        coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
+        der1, der2, _, dt = CoilSet.compute_coil_der(self, coil_arg)   
+        tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
+        centroid_frame = tangent, normal, binormal
+        alpha = CoilSet.compute_alpha(self, fr)
+        v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
+        curva, deltal = CoilSet.compute_cd(self, coil_centroid, der1, der2)
+        dl = der1[:, np.newaxis, np.newaxis, :, :] * dt
+        strain = hts_strain.HTS_strain(self.args, curva, v1, dl)
+        return strain
 
 
     def get_plot_args(self, params):
@@ -482,8 +497,9 @@ class CoilSet:
         curva, deltal = CoilSet.compute_cd(self, coil_centroid, der1, der2)
         dl = der1[:, np.newaxis, np.newaxis, :, :] * dt
         r = coil_centroid[:, np.newaxis, np.newaxis, :, :]
-        r = CoilSet.stellarator_symmetry_coil(self, r)
-        dl = CoilSet.stellarator_symmetry_coil(self, dl)
+        if self.ss == 1:
+            r = CoilSet.stellarator_symmetry_coil(self, r)
+            dl = CoilSet.stellarator_symmetry_coil(self, dl)
         r = CoilSet.symmetry_coil(self, r)
         dl = CoilSet.symmetry_coil(self, dl)
         B_coil = B_self.coil_self_B_rec(self.args, r, I, dl, v1, v2, binormal, curva, der2)

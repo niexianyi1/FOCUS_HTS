@@ -328,8 +328,8 @@ class CoilSet:
         _, N, B = frame
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
-        v1 = calpha[:, :, np.newaxis] * N - salpha[:, :, np.newaxis] * B
-        v2 = salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
+        v1 = calpha[:, :, np.newaxis] * N + salpha[:, :, np.newaxis] * B
+        v2 = -salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
         return v1, v2
 
 
@@ -339,14 +339,14 @@ class CoilSet:
         salpha = np.sin(alpha)
         dv1_dt = (
             calpha[:, :, np.newaxis] * dNdt
-            - salpha[:, :, np.newaxis] * dBdt
+            + salpha[:, :, np.newaxis] * dBdt
             - salpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
-            - calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
+            + calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         dv2_dt = (
-            salpha[:, :, np.newaxis] * dNdt
+            - salpha[:, :, np.newaxis] * dNdt
             + calpha[:, :, np.newaxis] * dBdt
-            + calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
+            - calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
             - salpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         return dv1_dt, dv2_dt

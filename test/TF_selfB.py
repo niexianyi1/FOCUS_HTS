@@ -2,14 +2,14 @@ import json
 import sys 
 import jax.numpy as np
 import plotly.graph_objects as go
-sys.path.append('/home/nxy/codes/coil_spline_HTS/HTS')
+sys.path.append('HTS')
 from material_jcrit import get_critical_current
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import read_init
 
-sys.path.append('/home/nxy/codes/coil_spline_HTS/test')
+sys.path.append('test')
 from coil_cal import CoilSet
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 
 I = args['current_I'][0]

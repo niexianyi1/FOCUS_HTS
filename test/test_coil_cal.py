@@ -1,9 +1,9 @@
 import jax.numpy as np
 from jax import jit, vmap
 import numpy
-from jax.config import config
+from jax import config
 import sys
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import fourier
 import spline
 import lossfunction
@@ -283,8 +283,8 @@ class CoilSet:
         _, N, B = frame
         calpha = np.cos(alpha)
         salpha = np.sin(alpha)
-        v1 = calpha[:, :, np.newaxis] * N - salpha[:, :, np.newaxis] * B
-        v2 = salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
+        v1 = calpha[:, :, np.newaxis] * N + salpha[:, :, np.newaxis] * B
+        v2 = - salpha[:, :, np.newaxis] * N + calpha[:, :, np.newaxis] * B
         return v1, v2
 
     def compute_frame_derivative(self, alpha, alpha1, frame, dNdt, dBdt): 
@@ -293,14 +293,14 @@ class CoilSet:
         salpha = np.sin(alpha)
         dv1_dt = (
             calpha[:, :, np.newaxis] * dNdt
-            - salpha[:, :, np.newaxis] * dBdt
+            + salpha[:, :, np.newaxis] * dBdt
             - salpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
-            - calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
+            + calpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         dv2_dt = (
             salpha[:, :, np.newaxis] * dNdt
             + calpha[:, :, np.newaxis] * dBdt
-            + calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
+            - calpha[:, :, np.newaxis] * N * alpha1[:, :, np.newaxis]
             - salpha[:, :, np.newaxis] * B * alpha1[:, :, np.newaxis]
         )
         return dv1_dt, dv2_dt

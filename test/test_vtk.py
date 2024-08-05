@@ -78,10 +78,10 @@ def toVTK(vtkname,rr, line=False, height=0.16, width=0.16, **kwargs):
     return
 
 
-rr = np.load('/home/nxy/codes/coil_spline_HTS/results/plot/3d_to_vtk/rr.npy')
-B = np.load('/home/nxy/codes/coil_spline_HTS/results/plot/3d_to_vtk/B.npy')
+rr = np.load('results/plot/3d_to_vtk/rr.npy')
+B = np.load('results/plot/3d_to_vtk/B.npy')
 for i in range(5):
-    toVTK('/home/nxy/codes/coil_spline_HTS/results/plot/3d_to_vtk/rr{}.vtk'.format(i+1), rr[i], line=False, height=0.16, width=0.16)
+    toVTK('results/plot/3d_to_vtk/rr{}.vtk'.format(i+1), rr[i], line=False, height=0.16, width=0.16)
 
 
 

@@ -32,9 +32,9 @@ def symmetry_sg(sg):
     return sgn
 
 
-rs = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/ellipse/r_surf.npy')
-nn = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/ellipse/nn_surf.npy')
-sg = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/ellipse/sg_surf.npy')
+rs = np.load('initfiles/ellipse/r_surf.npy')
+nn = np.load('initfiles/ellipse/nn_surf.npy')
+sg = np.load('initfiles/ellipse/sg_surf.npy')
 
 
 

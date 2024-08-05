@@ -2,16 +2,16 @@ import json
 import sys 
 import jax.numpy as np
 import plotly.graph_objects as go
-sys.path.append('/home/nxy/codes/coil_spline_HTS/HTS')
+sys.path.append('HTS')
 from material_jcrit import get_critical_current
-sys.path.append('/home/nxy/codes/coil_spline_HTS/iteration')
+sys.path.append('iteration')
 import read_init
 import fourier
 import spline
-sys.path.append('/home/nxy/codes/coil_spline_HTS/test')
+sys.path.append('test')
 from test_coil_cal import CoilSet
 
-with open('/home/nxy/codes/coil_spline_HTS/initfiles/init_args.json', 'r') as f:    # 传入地址
+with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 
 
@@ -57,12 +57,12 @@ def read_makegrid_saddle(filename, nct, ncs, nst, nss):
     # Ip = Ip[:,1]
     Is = Is[:,1]
     return rt, rs, Is
-# rt, rs, Is = read_makegrid_saddle('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coils.dat', nct, ncs, nst, nss)
-rt = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coiltf_12.npy')
-# np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coilpf_12.npy', rp)
-rs = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coilsd_144.npy')
-# np.save('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_Ip_12.npy', Ip)
-Is = np.load('/home/nxy/codes/coil_spline_HTS/initfiles/aries/coil_4_1/coil_Is_144.npy')
+# rt, rs, Is = read_makegrid_saddle('initfiles/aries/coil_4_1/coils.dat', nct, ncs, nst, nss)
+rt = np.load('initfiles/aries/coil_4_1/coiltf_12.npy')
+# np.save('initfiles/aries/coilpf_12.npy', rp)
+rs = np.load('initfiles/aries/coil_4_1/coilsd_144.npy')
+# np.save('initfiles/aries/coil_Ip_12.npy', Ip)
+Is = np.load('initfiles/aries/coil_4_1/coil_Is_144.npy')
 
 
 print(np.max(abs(Is)))
