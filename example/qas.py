@@ -142,6 +142,8 @@ args = {
 
     #  target 不为0则采取差值平方的loss
     'target_length_mean':            0,          #       float,  目标长度, 
+    'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
+                            [1.5,1.5,1.5,1.5],
     'target_curvature_max':     0,          #       float,  目标最大曲率
     'target_torsion_max':       0,          #       float,  目标最大扭转
     'target_distance_coil_coil':    10,      #       float,  目标最大线圈间距

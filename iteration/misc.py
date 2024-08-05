@@ -19,6 +19,25 @@ with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
-a = [1,1]
-b = [2,2]
-print((np.array(a)+np.array(b))**2)
+def read_hdf5(filename):
+    f = h5py.File(filename, "r")
+    arge = {}
+    for key in list(f.keys()):
+        val = f[key][()]
+        if key == 'num_fourier_coils':
+            key = 'number_fourier_coils'
+        if isinstance(val, bytes):
+            val = str(val, encoding='utf-8')
+        arge.update({key: val})
+    f.close()
+    return arge
+
+filename = 'results/LQA/LQA_no.h5'
+arge = read_hdf5(filename)
+arg = arge['coil_arg']
+fc = np.zeros((6, 4, 6))
+fc = fc.at[:,0].set(arg[:,0])
+fc = fc.at[:,1].set(arg[:,4])
+fc = fc.at[:,2].set(arg[:,8])
+fc = fc.at[:,3].set(arg[:,12])
+np.save('initfiles/Landreman-Paul_QA/fc.npy',fc)

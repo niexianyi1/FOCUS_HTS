@@ -138,6 +138,8 @@ args = {
 
     # 目标
     'target_length_mean':            8.5,          #       float,  目标长度, 若为0则约束其较小
+    'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
+                            [1.5,1.5,1.5,1.5],
     'target_curvature_max':     2.36,          #       float,  目标最大曲率
     'target_torsion_max':       5,          #       float,  目标最大扭转
     'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距

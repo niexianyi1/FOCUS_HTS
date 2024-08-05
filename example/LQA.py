@@ -45,21 +45,21 @@ args = {
 
     # 线圈参数
     'number_coils':             16,         # (nc)  int,    线圈总数                    
-    'number_field_periods':     1,          # (nfp) int,    线圈周期数                     
-    'stellarator_symmetry':     0,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 16,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
+    'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
+    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
+    'number_independent_coils': 4,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
     'number_segments':          128,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
-    'init_coil_option':         'coordinates',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
+    'init_coil_option':         'fourier',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
     
     'circle_coil_radius':       0.8,        #       float,  'circle' 的初始半径   
-    'coil_file_type':           'makegrid',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
+    'coil_file_type':           'npy',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
     
     # 线圈文件
     'init_coil_file':                       #       str,    初始线圈文件名
-            'initfiles/Landreman-Paul_QA/coils.pqa_no_well',       
+            'initfiles/Landreman-Paul_QA/fc.npy',       
     'read_coil_segments':        160,        #       int,    makegrid文件中的线圈段数 
 
     # Fourier表示
@@ -92,7 +92,7 @@ args = {
 
     # 电流初始
     'current_independent':      0,          #       int,    每个独立线圈是否拥有独立电流, 0:否, 1:是
-    'current_I':                [1e6],      #       list,   线圈初始电流数值         
+    'current_I':                [1e5,1.027e5,1.072e5,1.056e5],      #       list,   线圈初始电流数值         
     'total_current_I':          0,          #       int,    电流优化时是否保持总电流不变, 
         # 若为0, 则不设置总电流; 若不为0, 则为总电流数值
 
