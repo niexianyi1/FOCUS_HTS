@@ -35,7 +35,7 @@ def loss_value(args, coil_output_func, params, surface_data):
     if args['weight_length'] != 0:
         len_mean, len_signle = average_length(args, coil)
         if args['target_length_single'][0] != 0:
-            length = (len_signle - np.array(args['target_length_single'])) ** 2
+            length = np.sum((len_signle - np.array(args['target_length_single'])) ** 2)
         elif args['target_length_mean'] != 0:
             length = (len_mean - args['target_length_mean']) ** 2
         elif args['target_length_mean'] == 0:
@@ -260,7 +260,7 @@ def loss_save(args, coil_output_func, params, surface_data):
     I, dl, coil, der1, der2, der3, v1, v2, binormal = coil_output_func(params)
     I = I * args['I_normalize']
     Bn_mean, B_max_surf, B, Bn = quadratic_flux(args, I, dl, coil, surface_data)
-    length = average_length(args, coil)
+    len_mean, len_signle = average_length(args, coil)
     curva = curvature(der1, der2)
     k_mean, k_max = curvature_mean_max(curva)
     tor = torsion(args, der1, der2, der3, coil)
@@ -284,7 +284,8 @@ def loss_save(args, coil_output_func, params, surface_data):
 
     print('**********loss_functions_value**********')
     print('loss_Bn_mean = ', Bn_mean)
-    print('loss_length =  ', length, 'm')
+    print('loss_length_mean =  ', len_mean, 'm')
+    print('loss_length_single = ', len_signle, 'm')
     print('loss_curvature =  ', k_mean, '1/m')
     print('loss_curva_max =  ', k_max, '1/m')
     print('loss_tor_mean =  ', t_mean, '1/m')
@@ -299,7 +300,8 @@ def loss_save(args, coil_output_func, params, surface_data):
     loss_end = {
         'loss_Bn_mean'      :   Bn_mean,
         'loss_B_max_surf'   :   B_max_surf,
-        'loss_length'       :   length,
+        'loss_length_mean'  :   len_mean,
+        'loss_length_single':   len_signle,
         'loss_curvature'    :   k_mean,
         'loss_curva_max'    :   k_max,
         'loss_dcc_min'      :   dcc_min,

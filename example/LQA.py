@@ -59,8 +59,8 @@ args = {
     
     # 线圈文件
     'init_coil_file':                       #       str,    初始线圈文件名
-            'initfiles/Landreman-Paul_QA/coils.pqa_well',       
-    'read_coil_segments':        128,        #       int,    makegrid文件中的线圈段数 
+            'initfiles/Landreman-Paul_QA/coils.pqa_no_well',       
+    'read_coil_segments':        160,        #       int,    makegrid文件中的线圈段数 
 
     # Fourier表示
     'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
@@ -150,11 +150,11 @@ args = {
 # 结果保存
 
     # 输出选项,  0：不保存, 1：保存, 
-    'save_hdf5' :               0,          #       int,    保存hdf5文件, 包含所有参数(大部分)
+    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/LQA/circle_start/f2n.h5',   
+        'results/LQA/LQA_no.h5',   
 
 # 简单画图(更多功能可在后处理post/post_plot.py中进行)
 

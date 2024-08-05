@@ -19,6 +19,6 @@ with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)
 globals().update(args)
 
-
-
-
+a = [1,1]
+b = [2,2]
+print((np.array(a)+np.array(b))**2)
