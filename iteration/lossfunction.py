@@ -293,7 +293,7 @@ def loss_save(args, coil_output_func, params, surface_data):
     print('loss_dcc_min =  ', dcc_min, 'm')
     print('loss_dcs_min =  ', dcs_min, 'm')
     print('loss_strain_max =  ', strain_max)
-    print('loss_force =  ', force, 'N')
+    print('loss_force =  ', force, 'N/m')
     print('loss_B_coil_max = ', B_coil_max, 'T')
     print('loss_HTS_Icrit = ', I_coil_crit, 'A')
     

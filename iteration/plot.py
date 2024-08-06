@@ -146,7 +146,6 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
 
         B_coil = np.linalg.norm(B_coil, axis=-1)
         Bmax, Bmin = float(np.max(B_coil)), float(np.min(B_coil))
-        print(np.max(B_coil, axis=(1,2)))
         print('maxB = ', Bmax, Bmin)
         B = np.zeros((nic, 5, ns+1))
         B = B.at[:, :-1, :-1].set(B_coil)
