@@ -76,7 +76,9 @@ def loss_value(args, coil_output_func, params, surface_data):
         Bx, By = B_coil_normal(B_coil, v2)
         j_crit, _ = Jcrit(args, B_coil, strain, Bx, By)
         I_crit = Icrit(args, j_crit)
-        lossvalue += args['weight_HTS_Icrit'] * I_crit
+        diff_I = abs(I_crit - I)
+        loss_I = np.max()
+        lossvalue += args['weight_HTS_Icrit'] * loss_I
 
     if args['weight_HTS_strain'] != 0:
         strain = hts_strain.HTS_strain(args, curva, v1, dl)

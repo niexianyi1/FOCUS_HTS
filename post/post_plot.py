@@ -487,7 +487,7 @@ def plot_surface_compare(arge, coilfile):
     return
 
 
-filename = 'results/LQA/circle_start/length/ls_2.h5'
+filename = 'results/LQA/circle_start/spline/s9n10_l0dcc_1.h5'
 arge = read_hdf5(filename)
 # plot_surface_0(arge)
 # plot_coil(arge)

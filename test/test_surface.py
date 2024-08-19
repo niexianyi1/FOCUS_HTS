@@ -4,7 +4,7 @@ import json
 import sys 
 import plotly.graph_objects as go
 # sys.path.append('iteration')
-import read_plasma
+import useful_script.read_plasma as read_plasma
 
 
 

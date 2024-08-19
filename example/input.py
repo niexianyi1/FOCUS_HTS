@@ -123,6 +123,9 @@ args = {
 
 # loss function 目标和权重
 
+    # 权重设置
+    'weight_normalization':     0,          #       int,    是否归一化权重 wi*fi = weight
+    
     # 权重
     'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
     'weight_length':            0.001,          # (wl)  float,  单根线圈平均长度 

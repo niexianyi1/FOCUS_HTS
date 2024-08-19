@@ -52,18 +52,18 @@ def read_hdf5(filename):
     return arge
 
 
-filename = 'results/LQA/circle_start/length/l_2t4.2.h5'
+filename = 'results/LQA/useful/c_s_f10n7.h5'
 arge = read_hdf5(filename)
 
 
-# iter = ["iter_method","minimize_method","minimize_tol", 'coil_case','nlopt_algorithm','stop_criteria']
-# weight = ["weight_bnormal","weight_length","weight_curvature","weight_curvature_max","weight_torsion",
-# "weight_torsion_max","weight_distance_coil_coil","weight_distance_coil_surface","weight_HTS_strain",
-# 'weight_B_theta','weight_HTS_force']
-losskeys = ['loss_Bn_mean','loss_length','loss_curvature','loss_curva_max','loss_tor_mean','loss_tor_max',
+iter = ["iter_method","minimize_method","minimize_tol", 'coil_case','nlopt_algorithm','stop_criteria']
+weight = ["weight_bnormal","weight_length","weight_curvature","weight_curvature_max","weight_torsion",
+"weight_torsion_max","weight_distance_coil_coil","weight_distance_coil_surface","weight_HTS_strain",
+'weight_HTS_force','weight_HTS_Icrit']
+losskeys = ['loss_Bn_mean','loss_length_mean','loss_length_single','loss_curvature','loss_curva_max','loss_tor_mean','loss_tor_max',
 'loss_dcc_min','loss_dcs_min','loss_strain_max','loss_force','loss_B_coil_max','loss_HTS_Icrit']
-# target = ['target_length_mean', 'target_curvature_max', 'target_torsion_max', 'target_distance_coil_coil',
-# 'target_distance_coil_surface', 'target_HTS_strain']
+target = ['target_length_mean', 'target_curvature_max', 'target_torsion_max', 'target_distance_coil_coil',
+'target_distance_coil_surface', 'target_HTS_strain']
 # for key in list(iter):
 #     print(arge['{}'.format(key)])
 # for key in list(weight):
