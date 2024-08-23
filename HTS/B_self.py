@@ -93,7 +93,7 @@ def coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2):
     return B_self
 
 
-def loss_B_coil(args, coil, I, dl, v1, v2, binormal, curva, der2):
+def coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2):
     nic = args['number_independent_coils']
     ns = args['number_segments']    
     nn = args['number_normal']

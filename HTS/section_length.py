@@ -40,7 +40,7 @@ def compute_section(args, B_self_input):
     coil, I, dl, v1, v2, binormal, curva, der2 = B_self_input
     I = I * args['I_normalize']
     curva = 3 * curva   ### 这里手动给了一个倍率
-    strain = hts_strain.HTS_strain(args, curva, v1, dl)
+    strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
     strain_max = np.max(strain)
     B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
     B_self_max = np.max(np.linalg.norm(B_coil, axis=-1), axis = (1,2))

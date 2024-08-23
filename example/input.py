@@ -178,9 +178,6 @@ args = {
     'var':                      0.999,      # adam优化方法的参数
     'eps':                      1e-8,       # adam优化方法的参数
 
-    # Bspline表示
-    'spline_k':                 3,          # (k)   int,    Bspline阶数,默认为3阶
-
     # 旋转角参数
     'number_rotate':            0,          # (nr)  int,    描述线圈绕组组的半旋转数的整数,通常设为0                    
     'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数    

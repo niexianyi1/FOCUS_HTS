@@ -43,3 +43,5 @@ globals().update(args)
 # np.save('initfiles/Landreman-Paul_QA/fc.npy',fc)
 
 
+a = numpy.spacing(1)
+print(a)

@@ -480,7 +480,7 @@ class CoilSet:
         v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
         curva, deltal = CoilSet.compute_cd(self, coil_centroid, der1, der2)
         dl = der1[:, np.newaxis, np.newaxis, :, :] * dt
-        strain = hts_strain.HTS_strain(self.args, curva, v1, dl)
+        strain = hts_strain.HTS_strain(self.args, curva, v1, v2, dl)
         return strain
 
 

@@ -64,24 +64,23 @@ def loss_value(args, coil_output_func, params, surface_data):
         lossvalue += args['weight_distance_coil_surface'] * dcs_min
 
     if args['weight_HTS_force'] != 0:
-        B_reg = B_self.loss_B_coil(args, coil, I, dl, v1, v2, binormal, curva, der2)
+        B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
         force = calculate_force(I, B_reg, dl)
-        force = np.max(np.array([force-args['target_HTS_force'], 0]))
+        force = -np.min(np.array([force-args['target_HTS_force'], 0]))
         lossvalue += args['weight_HTS_force'] * force
 
     if args['weight_HTS_Icrit'] != 0:
-        strain = hts_strain.HTS_strain(args, curva, v1, dl)
+        strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
         strain = np.max(strain, axis=1)
         B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2)
-        Bx, By = B_coil_normal(B_coil, v2)
+        Bx, By = B_coil_normal(B_coil, v1, v2)
         j_crit, _ = Jcrit(args, B_coil, strain, Bx, By)
         I_crit = Icrit(args, j_crit)
-        diff_I = abs(I_crit - I)
-        loss_I = np.max()
-        lossvalue += args['weight_HTS_Icrit'] * loss_I
+        loss_I = np.min(I_crit)
+        lossvalue += args['weight_HTS_Icrit'] * (-1) * loss_I
 
     if args['weight_HTS_strain'] != 0:
-        strain = hts_strain.HTS_strain(args, curva, v1, dl)
+        strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
         strain_max = np.max(np.array([np.max(strain) - args['target_HTS_strain'], 0]))
         lossvalue += args['weight_HTS_strain'] * strain_max
 
@@ -269,10 +268,10 @@ def loss_save(args, coil_output_func, params, surface_data):
     t_mean, t_max = torsion_mean_max(tor)
     dcc_min = distance_cc(args, coil)
     dcs_min = distance_cs(args, coil, surface_data)
-    strain = hts_strain.HTS_strain(args, curva, v1, dl)
+    strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
     strain_coil = np.max(strain, axis=1)
     strain_max = np.max(strain)
-    B_reg = B_self.loss_B_coil(args, coil, I, dl, v1, v2, binormal, curva, der2)
+    B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
     force = calculate_force(I, B_reg, dl)
     B_coil_theta = B_coil_normal(B_reg, v2)
     B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
