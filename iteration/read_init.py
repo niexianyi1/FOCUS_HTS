@@ -29,8 +29,8 @@ def init(args):
         # B_extern :    额外磁场, 一般为背景磁场
     """
     args, surface_data = get_surface_data(args)
-    args, I_init = init_I(args)
     args, coil_arg_init, fr_init = coil_init(args, surface_data)    # coil_arg：线圈参数, Fourier或spline表示
+    args, I_init = init_I(args)
     args = get_finite_build_length(args, coil_arg_init, fr_init, I_init)
     if args['Bn_extern'] != 0:
         args = get_Bn_extern(args)
@@ -105,7 +105,8 @@ def init_I(args):
     """    
     nic = args['number_independent_coils']
     if args['coil_file_type'] == 'makegrid':
-        _, I = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
+        I = args['makegrid_I']          
+        
     else:
         current_I = args['current_I']
         I = np.zeros(nic)
@@ -138,6 +139,7 @@ def coil_init(args, surface_data):
     """    
     
     nic = args['number_independent_coils']
+    nc = args['number_coils']
     ns = args['number_segments']
     assert nic * args['number_field_periods'] * (args['stellarator_symmetry'] + 1) == args['number_coils'] 
     
@@ -155,44 +157,56 @@ def coil_init(args, surface_data):
             arge = read_file.read_hdf5(args['init_fr_file'])
             fr_init = np.array(arge['coil_fr'])
 
-    ## 总变量
+    ## 线圈参数
     if args['coil_case'] == 'fourier':
         if args['init_coil_option'] == 'fourier':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 fc_init = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'hdf5':
-                arge = read_file.read_hdf5("{}".format(args['init_coil_file']))
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
                 fc_init = np.array(arge['coil_arg'])
 
         elif args['init_coil_option'] == 'coordinates':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 coil = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'makegrid':
-                coil, _ = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])
-            fc_init = fourier.compute_coil_fourierSeries(nic, args['read_coil_segments'], args['number_fourier_coils'], coil)
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
+                coil = np.array(arge['coil_centroid'])
+            else:
+                coil, I = read_file.read_makegrid(args['init_coil_file'], nc, nic)         
+                args['makegrid_I'] = I 
+            fc_init = fourier.compute_coil_fourierSeries(coil, args['number_fourier_coils'])
 
         elif args['init_coil_option'] == 'circle':
             coil = circle_coil(args, surface)
-            fc_init = fourier.compute_coil_fourierSeries(nic, ns, args['number_fourier_coils'], coil)
+            fc_init = fourier.compute_coil_fourierSeries(coil, args['number_fourier_coils'])
         
         coil_arg_init = fc_init
         return args, coil_arg_init, fr_init
 
     elif args['coil_case'] == 'spline':
         if args['init_coil_option'] == 'spline':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 c_init = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'hdf5':
-                arge = read_file.read_hdf5("{}".format(args['init_coil_file']))
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
                 c_init = np.array(arge['coil_arg'])
             assert args['number_control_points'] == c_init.shape[2]
             bc, tj = spline.get_bc_init(ns, args['number_control_points'])
 
         elif args['init_coil_option'] == 'coordinates':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 coil = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'makegrid':
-                coil, _ = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
+                coil = np.array(arge['coil_centroid'])
+            else:
+                coil, I = read_file.read_makegrid(args['init_coil_file'], nc, nic)           
+                args['makegrid_I'] = I 
             c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
 
         elif args['init_coil_option'] == 'circle':
@@ -206,19 +220,25 @@ def coil_init(args, surface_data):
 
     elif args['coil_case'] == 'spline_local':
         if args['init_coil_option'] == 'spline':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 c_init = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'hdf5':
-                arge = read_file.read_hdf5("{}".format(args['init_coil_file']))
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
                 c_init = np.array(arge['coil_arg'])
             assert args['number_control_points'] == c_init.shape[2]
             bc, tj = spline.get_bc_init(ns, args['number_control_points'])
 
         elif args['init_coil_option'] == 'coordinates':
-            if args['coil_file_type'] == 'npy':
+            file = args['init_coil_file'].split('.')
+            if file[-1] == 'npy':
                 coil = np.load(args['init_coil_file'])
-            if args['coil_file_type'] == 'makegrid':
-                coil, _ = read_file.read_makegrid(args['init_coil_file'], nic, args['read_coil_segments'])           
+            elif file[-1] == 'h5':
+                arge = read_file.read_hdf5(args['init_coil_file'])
+                coil = np.array(arge['coil_centroid'])
+            else:
+                coil, I = read_file.read_makegrid(args['init_coil_file'], nc, nic)           
+                args['makegrid_I'] = I 
             c_init, bc, tj = spline.get_c_init(coil, nic, ns, args['number_control_points'])
         args['bc'] = bc
         args['tj'] = tj
@@ -234,13 +254,12 @@ def circle_coil(args, surface):
     nic = args['number_independent_coils']
     ns = args['number_segments']
     nc = args['number_coils']
-    nzs = int(nz/2/args['number_field_periods'])
     axis = np.zeros((nz + 1, 3))
     axis = axis.at[:-1].set(np.mean(surface, axis = 1))
     axis = axis.at[-1].set(axis[0])
     axis = axis[np.newaxis, :, :]
-    fa = fourier.compute_coil_fourierSeries(1, nz, nfc, axis)
-    axis = fourier.compute_r_centroid(fa, nfc, 1, 2*nc)
+    fa = fourier.compute_coil_fourierSeries(axis, nfc)
+    axis = fourier.compute_r_centroid(fa, 2*nc)
     axis = np.squeeze(axis)[:-1]
 
     circlecoil = np.zeros((nic, ns+1, 3))
@@ -258,7 +277,6 @@ def circle_coil(args, surface):
 
 
 def local_coil(args, c_init):
-    ns = args['number_segments']
     nic = args['number_independent_coils']
     a = args['optimize_location_ns']
     loc = args['optimize_location_nic']

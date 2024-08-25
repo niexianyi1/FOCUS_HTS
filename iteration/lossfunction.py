@@ -26,11 +26,15 @@ def loss_value(args, coil_output_func, params, surface_data):
     I, dl, coil, der1, der2, der3, v1, v2, binormal = coil_output_func(params)
     curva = curvature(der1, der2)
     I = I * args['I_normalize']
-    lossvalue = 0
+    weight = [  args['weight_bnormal'], args['weight_length'], args['weight_curvature'], 
+                args['weight_curvature_max'], args['weight_torsion'], args['weight_torsion_max'],
+                args['weight_distance_coil_coil'], args['weight_distance_coil_surface'],
+                args['weight_HTS_force'], + args['weight_HTS_Icrit'],  args['weight_HTS_strain']]
+    loss = [0 for i in range(11)]
 
     if args['weight_bnormal'] != 0:
         Bn_mean, _, _, _ = quadratic_flux(args, I, dl, coil, surface_data)
-        lossvalue += args['weight_bnormal'] * Bn_mean
+        loss[0] = Bn_mean
 
     if args['weight_length'] != 0:
         len_mean, len_signle = average_length(args, coil)
@@ -40,34 +44,34 @@ def loss_value(args, coil_output_func, params, surface_data):
             length = (len_mean - args['target_length_mean']) ** 2
         elif args['target_length_mean'] == 0:
             length = len_mean
-        lossvalue += args['weight_length'] * length
+        loss[1] = length
 
     if args['weight_curvature'] !=0 or args['weight_curvature_max'] !=0:
         k_mean, k_max = curvature_mean_max(curva)
         k_max = np.max(np.array([k_max-args['target_curvature_max'], 0]))
-        lossvalue += args['weight_curvature'] * k_mean + args['weight_curvature_max'] * k_max
+        loss[2], loss[3] = k_mean, k_max
     
     if args['weight_torsion'] != 0 or args['weight_torsion_max'] != 0:
         tor = torsion(args, der1, der2, der3, coil)
         t_mean, t_max = torsion_mean_max(tor)
         t_max = np.max(np.array([t_max-args['target_torsion_max'], 0]))
-        lossvalue += args['weight_torsion'] * t_mean + args['weight_torsion_max'] * t_max
+        loss[4], loss[5] = t_mean, t_max
 
     if args['weight_distance_coil_coil'] != 0:
         dcc_min = distance_cc(args, coil)
         dcc_min = -np.min(np.array([-args['target_distance_coil_coil']+dcc_min, 0]))
-        lossvalue += args['weight_distance_coil_coil'] * dcc_min
+        loss[6] = dcc_min
 
     if args['weight_distance_coil_surface'] != 0:
         dcs_min = distance_cs(args, coil, surface_data)
         dcs_min = -np.min(np.array([-args['target_distance_coil_surface']+dcs_min, 0]))
-        lossvalue += args['weight_distance_coil_surface'] * dcs_min
+        loss[7] = dcs_min
 
     if args['weight_HTS_force'] != 0:
         B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
         force = calculate_force(I, B_reg, dl)
         force = -np.min(np.array([force-args['target_HTS_force'], 0]))
-        lossvalue += args['weight_HTS_force'] * force
+        loss[8] = force
 
     if args['weight_HTS_Icrit'] != 0:
         strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
@@ -77,12 +81,25 @@ def loss_value(args, coil_output_func, params, surface_data):
         j_crit, _ = Jcrit(args, B_coil, strain, Bx, By)
         I_crit = Icrit(args, j_crit)
         loss_I = np.min(I_crit)
-        lossvalue += args['weight_HTS_Icrit'] * (-1) * loss_I
+        loss[9] = loss_I
 
     if args['weight_HTS_strain'] != 0:
         strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
         strain_max = np.max(np.array([np.max(strain) - args['target_HTS_strain'], 0]))
-        lossvalue += args['weight_HTS_strain'] * strain_max
+        loss[10] = strain_max
+
+    loss = np.array(loss)
+##  if weight_normalization
+    if args['weight_normalization'] == 0:
+        lossvalue = np.sum(np.array(weight) * np.array(loss)
+)
+    if args['weight_normalization'] == 1:
+        for i in range(1, 11):
+            if loss[i] == 0:
+                weight[i] = 0
+            else:
+                weight[i] = weight[i] / loss[i]
+        lossvalue = np.sum(np.array(weight) * np.array(loss))
 
     return lossvalue
 

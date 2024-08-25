@@ -44,11 +44,11 @@ import fourier
 # fc = np.zeros((6, 18, 6))
 # for i in range(18):
 #     rc = np.array(coil[i])[np.newaxis, :, :]
-#     f = fourier.compute_coil_fourierSeries(1, n0[i], 6, rc)
+#     f = fourier.compute_coil_fourierSeries(rc, 6)
 #     fc = fc.at[:, i, :].set(np.squeeze(f))
 # print(fc)
 # theta = np.linspace(0, 2 * np.pi, 211)
-# rc = fourier.compute_r_centroid(fc, 6, 18, 210, theta)
+# rc = fourier.compute_r_centroid(fc, 210)
 # np.save('initfiles/qas/coils_18.npy', rc)
 
 

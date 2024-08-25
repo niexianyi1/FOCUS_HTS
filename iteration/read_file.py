@@ -19,7 +19,7 @@ def read_hdf5(filename):
     return arge
 
 
-def read_makegrid(filename, nic, ns):    
+def read_makegrid(filename, nc, nic):    
     """
     读取初始线圈的makegrid文件
     Args:
@@ -30,23 +30,22 @@ def read_makegrid(filename, nic, ns):
         r : array, [nic, ns+1, 3], 线圈初始坐标
 
     """
-    coordinates = np.zeros((nic, ns+1, 3))
     I = np.zeros((nic))
     with open(filename) as f:
-        _ = f.readline()
-        _ = f.readline()
-        _ = f.readline()
-        for i in range(nic):
-            for s in range(ns):
-                x = f.readline().split()
-                coordinates = coordinates.at[i, s, 0].set(float(x[0]))
-                coordinates = coordinates.at[i, s, 1].set(float(x[1]))
-                coordinates = coordinates.at[i, s, 2].set(float(x[2]))
-            I = I.at[i].set(float(x[3]))
-            _ = f.readline()
+        lines = f.readlines()
+    len_lines = len(lines)
+    ns = int(((len_lines - 4) / nc) - 1 )
+    nfp = int((lines[0].split())[-1])
+    coordinates = np.zeros((nic, ns+1, 3))    
+    for i in range(nic):
+        for s in range(ns):
+            x = lines[3+i*2*nfp*(ns+1)+s].split()
+            coordinates = coordinates.at[i, s, 0].set(float(x[0]))
+            coordinates = coordinates.at[i, s, 1].set(float(x[1]))
+            coordinates = coordinates.at[i, s, 2].set(float(x[2]))
+        I = I.at[i].set(float(x[3]))
     coordinates = coordinates.at[:, -1, :].set(coordinates[:, 0, :])
     return coordinates, I
-
 
 
 def read_plasma(args):

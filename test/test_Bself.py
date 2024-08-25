@@ -27,7 +27,7 @@ fr = np.zeros((2, nc, args['number_fourier_rotate']))
 theta = np.linspace(0, 2 * np.pi, ns + 1)
 fc = np.load('initfiles/hsx/Bself_hsx_fc.npy')[:, 0, :]
 fc = fc[np.newaxis, :, :]
-rc = fourier.compute_r_centroid(fc, 17, nc, ns)
+rc = fourier.compute_r_centroid(fc, ns)
 coil = rc[:, :-1, :]
 
 # def average_length(coil):      #new
@@ -46,7 +46,7 @@ coil = rc[:, :-1, :]
 # fig.update_layout(scene_aspectmode='data')
 # fig.show()
 
-der1 = fourier.compute_der1(fc, 17, nc, ns)
+der1 = fourier.compute_der1(fc, ns)
 dl = der1[:, :-1, :] * (2*np.pi/ns)
 coil_cal = CoilSet(args)
 

@@ -16,7 +16,7 @@ globals().update(args)
 nic, ns, ncp, nfc = 1, 64, 67, 6
 ## xyz坐标
 coil = np.load('initfiles/w7x/w7x_coil_5.npy')[-1]
-fc = fourier.compute_coil_fourierSeries(nic, ns, nfc, coil[np.newaxis, :, :])
+fc = fourier.compute_coil_fourierSeries(coil[np.newaxis, :, :], nfc)
 coil = numpy.array(np.transpose(coil, (1, 0)))
 tck3, u = si.splprep(x=coil, k=3, per=1, s=0)
 tck4, u = si.splprep(x=coil, k=4, per=1, s=0)
@@ -27,7 +27,7 @@ ns = 1024
 u = u = np.linspace(0, (ns-1)/ns ,ns)
 xyz3 = si.splev(u, tck3)
 xyz4 = si.splev(u, tck4)
-xyzf = fourier.compute_r_centroid(fc, nfc, nic, ns)[0]
+xyzf = fourier.compute_r_centroid(fc, ns)[0]
 
 
 

@@ -3,7 +3,7 @@ from jax import config
 config.update("jax_enable_x64", True)
 pi = np.pi
 
-def compute_coil_fourierSeries(nic, ns, nfc, coil):
+def compute_coil_fourierSeries(coil, nfc):
     """ 
     Takes a set of centroid positions and gives the coefficients
     of the coil fourier series in a single array 
@@ -12,8 +12,9 @@ def compute_coil_fourierSeries(nic, ns, nfc, coil):
     r_centroid (nparray): vector of length [nic, (ns + 1), 3], initial coil centroid
 
     Returns:
-    6 x nic x nfc array with the Fourier Coefficients of the initial coils
+    nic x 6 x nfc array with the Fourier Coefficients of the initial coils
     """
+    nic, ns = coil.shape[0], coil.shape[1]-1
     x = coil[:, :-1, 0]  # nic x ns
     y = coil[:, :-1, 1]
     z = coil[:, :-1, 2]
@@ -34,13 +35,14 @@ def compute_coil_fourierSeries(nic, ns, nfc, coil):
         xs = xs.at[:, m].set(2.0 * np.sum(x * np.sin(m * theta), axis=1) / ns)
         ys = ys.at[:, m].set(2.0 * np.sum(y * np.sin(m * theta), axis=1) / ns)
         zs = zs.at[:, m].set(2.0 * np.sum(z * np.sin(m * theta), axis=1) / ns)
-    fc = np.asarray([xc, yc, zc, xs, ys, zs])  # 6 x nic x nfc
-    fc = np.transpose(fc, (1, 0, 2))
+    fc = np.asarray([xc, yc, zc, xs, ys, zs])   
+    fc = np.transpose(fc, (1, 0, 2))            # nic x 6 x nfc
     return fc  
 
-def compute_r_centroid(fc, nfc, nic, ns):
+def compute_r_centroid(fc, ns):
     """ Computes the position of the winding pack centroid using the coil fourier series """
     theta = np.linspace(0, 2 * pi, ns + 1)
+    nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x = np.zeros((nic, ns + 1))
     y = np.zeros((nic, ns + 1))
@@ -59,8 +61,9 @@ def compute_r_centroid(fc, nfc, nic, ns):
         (x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis=2)
     return rc
 
-def compute_der1(fc, nfc, nic, ns):
+def compute_der1(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
+    nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x1 = np.zeros((nic, ns + 1))
     y1 = np.zeros((nic, ns + 1))
@@ -79,8 +82,9 @@ def compute_der1(fc, nfc, nic, ns):
         (x1[:, :, np.newaxis], y1[:, :, np.newaxis], z1[:, :, np.newaxis]), axis=2)
     return der1
 
-def compute_der2(fc, nfc, nic, ns):
+def compute_der2(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
+    nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x2 = np.zeros((nic, ns + 1))
     y2 = np.zeros((nic, ns + 1))
@@ -100,8 +104,9 @@ def compute_der2(fc, nfc, nic, ns):
         (x2[:, :, np.newaxis], y2[:, :, np.newaxis], z2[:, :, np.newaxis]), axis=2)
     return der2
 
-def compute_der3(fc, nfc, nic, ns):
+def compute_der3(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
+    nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x3 = np.zeros((nic, ns + 1))
     y3 = np.zeros((nic, ns + 1))

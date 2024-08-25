@@ -114,8 +114,8 @@ def circle_coil(args, surface):
     axis = axis.at[:-1].set(np.mean(surface, axis = 1))
     axis = axis.at[-1].set(axis[0])
     axis = axis[np.newaxis, :, :]
-    fa = fourier.compute_coil_fourierSeries(1, nz, nfc, axis)
-    axis = fourier.compute_r_centroid(fa, nfc, 1, 2*nc)
+    fa = fourier.compute_coil_fourierSeries(axis, nfc)
+    axis = fourier.compute_r_centroid(fa, 2*nc)
     axis = np.squeeze(axis)[:-1]
 
     circlecoil = np.zeros((nic, ns+1, 3))

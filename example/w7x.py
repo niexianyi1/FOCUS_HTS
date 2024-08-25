@@ -53,14 +53,12 @@ args = {
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
     'init_coil_option':         'coordinates',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
-    
     'circle_coil_radius':       1.3,        #       float,  'circle' 的初始半径   
-    'coil_file_type':           'npy',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
     
     # 线圈文件
     'init_coil_file':                       #       str,    初始线圈文件名
             'initfiles/w7x/w7x_coil_5.npy',       
-    'read_coil_segments':        64,        #       int,    makegrid文件中的线圈段数 
+
 
     # Fourier表示
     'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数

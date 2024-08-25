@@ -34,10 +34,10 @@ def circle_coil(args, surface):
     # axis = axis.at[:-1, :].set(np.mean(surface, axis = 1))
     # axis = axis.at[-1].set(axis[0])
     # axis = axis[np.newaxis, :, :]
-    # fa = fourier.compute_coil_fourierSeries(1, nz, nfc, axis)
+    # fa = fourier.compute_coil_fourierSeries(axis, nfc)
     theta = np.linspace(0, 2 * np.pi, nc + 1) + np.pi/(nc+1)
     
-    # axis_center = fourier.compute_r_centroid(fa, nfc, 1, nc, theta)
+    # axis_center = fourier.compute_r_centroid(fa, nc)
     # axis_center = np.squeeze(axis_center)[:-1]
     axis = np.mean(surface, axis = 1)[:nzs]
     

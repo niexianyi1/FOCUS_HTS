@@ -26,7 +26,7 @@ def read_fc_or_cp(filename):
 def fourier_to_spline(fc):
     if nc == 1:
         fc = fc[:, np.newaxis, :]
-    coil = fourier.compute_r_centroid(fc, nfc, nc, ns)
+    coil = fourier.compute_r_centroid(fc, ns)
     c, bc, tj = spline.get_c_init(coil, nc, ns, ncp)
 
     return c, bc, tj
@@ -38,7 +38,7 @@ def spline_to_fourier(c):
     bc, tj = spline.get_bc_init(ns, ncp)
     t, u, k = bc
     coil = spline.splev(t, u, c, tj, ns)
-    fc = fourier.compute_coil_fourierSeries(nc, ns, nfc, coil)
+    fc = fourier.compute_coil_fourierSeries(coil, nfc)
     return fc
 
 

@@ -48,9 +48,9 @@ def save_makegrid(args, coil_all):    # 或者直接输入r, I
     r = coil_all['coil_r']
     I = coil_all['coil_I']
     with open(args['out_coil_makegrid'], "w") as f:
-        f.write("periods {}\n".format(0))
+        f.write("periods {}\n".format(args['number_field_periods']))
         f.write("begin filament\n")
-        f.write("FOCUSADD Coils\n")
+        f.write("FOCUS-HTS_finite-build Coils\n")
         for i in range(args['number_independent_coils']):
             for n in range(args['number_normal']):
                 for b in range(args['number_binormal']):
@@ -70,9 +70,10 @@ def save_makegrid(args, coil_all):    # 或者直接输入r, I
                             r[i, 0, n, b, 2],
                             0.0,
                             "{},{},{}".format(i, n, b),
-                            "coil/filament1/filament2",
+                            "coil/normal/binormal",
                         )
                     )
+        f.write("end")
     return
 
 

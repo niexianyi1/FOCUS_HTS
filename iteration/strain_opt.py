@@ -82,16 +82,16 @@ def main():
         nic = args['number_independent_coils']
         if nic!=1:
             fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] - nic+1:-nic+1],
-                                (2, nic, args['number_fourier_rotate']))   
+                                (nic, 2, args['number_fourier_rotate']))   
             I = params[-nic+1:]
         else:
             fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] :],
-                                (2, nic, args['number_fourier_rotate']))   
+                                (nic, 2, args['number_fourier_rotate']))   
             I = np.array([])
 
         def coil_arg_fourier(args, params, nic):
             return np.reshape(params[:6 * nic * args['number_fourier_coils']], 
-                                (6, nic, args['number_fourier_coils']) )
+                                (nic, 6, args['number_fourier_coils']) )
         def coil_arg_spline(args, params, nic):
             return np.reshape(params[:nic * 3 * (args['number_control_points']-3)], 
                                 (nic, 3, (args['number_control_points']-3)) )
@@ -141,8 +141,8 @@ def main():
    
     elif args['iter_method'] == 'nlopt':
         for i in range(args['number_independent_coils']):
-
-            params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
+            coil_arg_init, fr_init = coil_arg_init[i], fr_init[i]
+            params = np.append(np.append(coil_arg_init, fr_init), [])
             opt = read_init.nlopt_op(args, params)
             opt.set_min_objective(objective_function_nlopt)
             opt.set_ftol_rel(args['stop_criteria'])

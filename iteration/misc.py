@@ -1,9 +1,7 @@
 import json
 import jax.numpy as np
 import numpy
-import read_init
-import jax
-from jax import jit, vmap
+import read_file
 import fourier
 import spline
 import plotly.graph_objects as go
@@ -42,6 +40,17 @@ globals().update(args)
 # fc = fc.at[:,3].set(arg[:,12])
 # np.save('initfiles/Landreman-Paul_QA/fc.npy',fc)
 
+a = np.zeros((4,5))
+print(a.shape[0])
 
-a = numpy.spacing(1)
-print(a)
+
+
+
+
+
+
+
+
+
+
+

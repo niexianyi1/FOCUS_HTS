@@ -91,18 +91,17 @@ def biotSavart(coil, I, dl, r_surf):
     return B
 
 nfc = 6
-fcs = fourier.compute_coil_fourierSeries(ncs, nss, nfc, rs)
-fct = fourier.compute_coil_fourierSeries(nct, nst, nfc, rt)
-# fcp = fourier.compute_coil_fourierSeries(ncp, nsp, 6, rp)
+fcs = fourier.compute_coil_fourierSeries(rs, nfc)
+fct = fourier.compute_coil_fourierSeries(rt, nfc)
+# fcp = fourier.compute_coil_fourierSeries(rp, 6)
 rt = rt[:, :-1, :]
 rs = rs[:, :-1, :]
 # rp = rp[:, :-1, :]
-der1s = fourier.compute_der1(fcs, nfc, ncs, nss)
+der1s = fourier.compute_der1(fcs, nss)
 dls = der1s[:, :-1, :] * (2*np.pi/nss)
-# thetap = np.linspace(0, 2 * np.pi, nsp + 1)
-# der1p = fourier.compute_der1(fcp, 6, ncp, nsp, thetap)
+# der1p = fourier.compute_der1(fcp, nsp)
 # dlp = der1p[:, :-1, :] * (2*np.pi/nsp)
-der1t = fourier.compute_der1(fct, nfc, nct, nst)
+der1t = fourier.compute_der1(fct, nst)
 dlt = der1t[:, :-1, :] * (2*np.pi/nst)
 
 # TF coil

@@ -22,12 +22,12 @@ coil = np.load('initfiles/w7x/w7x_coil_5.npy')[0]
 coil = coil[np.newaxis,:,:]
 
 ## fourier挠率
-fc = fourier.compute_coil_fourierSeries(nic, ns, nfc, coil)
+fc = fourier.compute_coil_fourierSeries(coil, nfc)
 ns = 64
-fxyz = fourier.compute_r_centroid(fc, nfc, nic, ns)
-der1 = fourier.compute_der1(fc, nfc, nic, ns)
-der2 = fourier.compute_der2(fc, nfc, nic, ns)
-der3 = fourier.compute_der3(fc, nfc, nic, ns)
+fxyz = fourier.compute_r_centroid(fc, ns)
+der1 = fourier.compute_der1(fc, ns)
+der2 = fourier.compute_der2(fc, ns)
+der3 = fourier.compute_der3(fc, ns)
 cross12 = np.cross(der1, der2)
 top = (cross12[:, :, 0] * der3[:, :, 0] + 
         cross12[:, :, 1] * der3[:, :, 1] +

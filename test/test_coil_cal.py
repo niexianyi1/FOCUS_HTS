@@ -99,7 +99,7 @@ class CoilSet:
 
         """     
         if self.args['coil_case'] == 'fourier':        
-            coil_centroid = fourier.compute_r_centroid(coil_arg, self.nfc, self.nic, self.ns)
+            coil_centroid = fourier.compute_r_centroid(coil_arg, self.ns)
             coil_centroid = coil_centroid[:, :-1, :]
         
         elif self.args['coil_case'] == 'spline':
@@ -131,9 +131,9 @@ class CoilSet:
 
         """   
         if self.args['coil_case'] == 'fourier':          
-            der1 = fourier.compute_der1(coil_arg, self.nfc, self.nic, self.ns)
-            der2 = fourier.compute_der2(coil_arg, self.nfc, self.nic, self.ns)
-            der3 = fourier.compute_der3(coil_arg, self.nfc, self.nic, self.ns)
+            der1 = fourier.compute_der1(coil_arg, self.ns)
+            der2 = fourier.compute_der2(coil_arg, self.ns)
+            der3 = fourier.compute_der3(coil_arg, self.ns)
             der1, der2, der3 = der1[:, :-1, :], der2[:, :-1, :], der3[:, :-1, :]
             dt = 2 * pi / self.ns
         elif self.args['coil_case'] == 'spline':

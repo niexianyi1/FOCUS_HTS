@@ -106,16 +106,16 @@ def main():
         nic = args['number_independent_coils']
         if nic!=1:
             fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] - nic+1:-nic+1],
-                                (2, nic, args['number_fourier_rotate']))   
+                                (nic, 2, args['number_fourier_rotate']))   
             I = params[-nic+1:]
         else:
             fr = np.reshape(params[-2 * nic * args['number_fourier_rotate'] :],
-                                (2, nic, args['number_fourier_rotate']))   
+                                (nic, 2, args['number_fourier_rotate']))   
             I = np.array([])
 
         def coil_arg_fourier(args, params, nic):
             return np.reshape(params[:6 * nic * args['number_fourier_coils']], 
-                                (6, nic, args['number_fourier_coils']) )
+                                (nic, 6, args['number_fourier_coils']) )
         def coil_arg_spline(args, params, nic):
             return np.reshape(params[:nic * 3 * (args['number_control_points']-3)], 
                                 (nic, 3, (args['number_control_points']-3)) )
@@ -197,48 +197,6 @@ def main():
         print('loss = ', opt.last_optimum_value())  
         params = list_to_params(xopt)   
 
-
-
-    ''' # elif args['iter_method'] == 'for-min':
-    #     opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
-    #     opt_state_fr = opt_init_fr(fr_init)  
-    #     opt_state_I = opt_init_I(I_init)  
-    #     for i in range(args['number_iteration']):
-    #         print('iter = ', i)
-    #         opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = update(
-    #             args, opt_state_coil_arg, opt_state_fr, opt_state_I)
-    #         loss_vals.append(loss_val)
-    #         print(loss_val)
-    #     coil_arg = get_params_coil_arg(opt_state_coil_arg)
-    #     fr = get_params_fr(opt_state_fr)
-    #     I = get_params_I(opt_state_I)
-    #     params = np.append(np.append(coil_arg, fr), I)
-    #     res = minimize(lambda params :objective_function_minimize(args, params), params, jac=True, 
-    #             method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
-    #     success, loss_val, params, n = res.success, res.fun, res.x, res.nit
-    #     print(success, 'n = ', n, 'loss = ', loss_val)   
-    #     params = list_to_params(params)   
-
-    # elif args['iter_method'] == 'min-for':
-    #     params = np.append(np.append(coil_arg_init, fr_init), I_init)
-    #     res = minimize(lambda params :objective_function_minimize(args, params), params, jac=True, 
-    #             method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
-    #     success, loss_val, params, n = res.success, res.fun, res.x, res.nit
-    #     print(success, 'n = ', n, 'loss = ', loss_val)  
-    #     params = list_to_params(params)  
-    #     coil_arg, fr, I = params
-    #     opt_state_coil_arg = opt_init_coil_arg(coil_arg)
-    #     opt_state_fr = opt_init_fr(fr) 
-    #     opt_state_I = opt_init_I(I) 
-    #     for i in range(args['number_iteration']):
-    #         print('iter = ', i)
-    #         opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = update(
-    #             args, opt_state_coil_arg, opt_state_fr, opt_state_I)
-    #         loss_vals.append(loss_val)
-    #         print(loss_val)
-    #     params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
-    #                 get_params_I(opt_state_I))
-    '''
 
     end = time.time()
     print('time cost = ', end - start)
