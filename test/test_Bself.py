@@ -26,7 +26,7 @@ args['number_fourier_coils'] = 17
 fr = np.zeros((2, nc, args['number_fourier_rotate'])) 
 theta = np.linspace(0, 2 * np.pi, ns + 1)
 fc = np.load('initfiles/hsx/Bself_hsx_fc.npy')[:, 0, :]
-fc = fc[:, np.newaxis, :]
+fc = fc[np.newaxis, :, :]
 rc = fourier.compute_r_centroid(fc, 17, nc, ns)
 coil = rc[:, :-1, :]
 

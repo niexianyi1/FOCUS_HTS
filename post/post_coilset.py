@@ -307,8 +307,8 @@ class CoilSet:
         """计算有限截面旋转角"""
         alpha = np.zeros((self.nic, self.ns+1))
         alpha += self.theta * self.nr / 2
-        Ac = fr[0]
-        As = fr[1]
+        Ac = fr[:, 0]
+        As = fr[:, 1]
         for m in range(self.nfr):
             arg = self.theta * m
             carg = np.cos(arg)
@@ -324,8 +324,8 @@ class CoilSet:
         """计算有限截面旋转角的导数""" 
         alpha_1 = np.zeros((self.nic, self.ns+1 ))
         alpha_1 += self.nr / 2
-        Ac = fr[0]
-        As = fr[1]
+        Ac = fr[:, 0]
+        As = fr[:, 1]
         for m in range(self.nfr):
             arg = self.theta * m
             carg = np.cos(arg)

@@ -52,7 +52,7 @@ def read_hdf5(filename):
     return arge
 
 
-filename = 'results/LQA/useful/c_s_f10n7.h5'
+filename = 'results/LQA/useful/cs_fn_4_b.h5'
 arge = read_hdf5(filename)
 
 

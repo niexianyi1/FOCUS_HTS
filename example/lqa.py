@@ -15,20 +15,20 @@ args = {
 # ------------ 常用参数 ------------ #
 # 优化
     # 优化目标
-    'coil_optimize':            1,          #       int,    是否优化线圈位置, 0为否, 1为是
+    'coil_optimize':            0,          #       int,    是否优化线圈位置, 0为否, 1为是
     'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
     'I_optimize':               0,          #       int,    是否优化电流, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'jax',     #       str,    优化方式, 'jax', 'min', 'nlopt', #'for-min', 'min-for'
+    'iter_method':              'min',     #       str,    优化方式, 'jax', 'min', 'nlopt'
     
     # 优化算法参数:minimize
-    'minimize_method':          'CG',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
-    'minimize_tol':             1e-2,       # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
+    'minimize_method':          'BFGS',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+    'minimize_tol':             1e-4,       # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
 
     # 优化算法参数:nlopt
     'nlopt_algorithm':          'LD_MMA',     #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
-    'stop_criteria':             1e-4,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
+    'stop_criteria':             1e-8,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
     'inequality_constraint':    'strain',
 
     # 优化算法参数:jax, 通过设置迭代步长是否为0可以控制优化
@@ -45,21 +45,21 @@ args = {
 
     # 线圈参数
     'number_coils':             16,         # (nc)  int,    线圈总数                    
-    'number_field_periods':     1,          # (nfp) int,    线圈周期数                     
-    'stellarator_symmetry':     0,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 16,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
+    'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
+    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
+    'number_independent_coils': 4,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
     'number_segments':          128,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
-    'init_coil_option':         'coordinates',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
+    'init_coil_option':         'fourier',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
     
     'circle_coil_radius':       0.8,        #       float,  'circle' 的初始半径   
-    'coil_file_type':           'makegrid',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
+    'coil_file_type':           'hdf5',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
     
     # 线圈文件
     'init_coil_file':                       #       str,    初始线圈文件名
-            'initfiles/Landreman-Paul_QA/coils.pqa_well',       
+            'results/LQA/non_circle_start/fourier/fsm4_1.h5',       
     'read_coil_segments':        128,        #       int,    makegrid文件中的线圈段数 
 
     # Fourier表示
@@ -78,15 +78,15 @@ args = {
 
     # 有限截面参数
     'length_calculate':         0,          #       int,    0：手动给出截面大小, 1：由超导线圈临界电流给出截面大小
-    'length_normal':            [0.05 for i in range(3)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
+    'length_normal':            [0.001 for i in range(3)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
     'length_binormal':          [0.05 for i in range(3)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
     'number_normal':            2,          # (nn)  int,    有限截面下的法向线圈数量                     
     'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量                    
                      
     # 旋转角参数
-    'init_fr_case':             0,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
+    'init_fr_case':             1,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
     'init_fr_file':                         #       str,    给出变量fr的初始值文件
-            'results_f/circle/s1_fr.npy',               
+            'results/LQA/non_circle_start/fourier/fsm4_1.h5',               
    
 # 电流
 
@@ -127,15 +127,15 @@ args = {
     'weight_normalization':     0,          #       int,    是否归一化权重 wi*fi=weight
 
     # 权重
-    'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
-    'weight_length':       1e-5,          # (wl)  float,  单根线圈平均长度 
+    'weight_bnormal':           0,          # (wb)  float,  法向磁场分量, 一般设为1
+    'weight_length':            0,          # (wl)  float,  单根线圈平均长度 
     'weight_curvature':         0,          # (wc)  float,  曲率 
     'weight_curvature_max':     0,          # (wcm) float,  最大曲率
     'weight_torsion':           0,          # (wt)  float,  扭转 
     'weight_torsion_max':       0,          # (wtm) float,  最大扭转
     'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
     'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
-    'weight_HTS_strain':            0,          #       float,  应变量
+    'weight_HTS_strain':            1,          #       float,  应变量
     'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
@@ -147,17 +147,17 @@ args = {
     'target_torsion_max':       5,              #  float,  目标最大扭转
     'target_distance_coil_coil':    0.25,       #  float,  目标最大线圈间距
     'target_distance_coil_surface': 0.44,       #  float,  目标最大线圈与磁面距离
-    'target_HTS_strain':            0.004,      #  float,  目标最大应变
+    'target_HTS_strain':            0,      #  float,  目标最大应变
     'target_HTS_force':             0,          #  float, 目标最大受力
 
 # 结果保存
 
     # 输出选项,  0：不保存, 1：保存, 
-    'save_hdf5' :               0,          #       int,    保存hdf5文件, 包含所有参数(大部分)
+    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/LQA/LQA_no.h5',   
+        'results/LQA/non_circle_start/fourier/fsm4_2.h5',   
 
 # 简单画图(更多功能可在后处理post/post_plot.py中进行)
 

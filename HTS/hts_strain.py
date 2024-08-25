@@ -15,10 +15,10 @@ def HTS_strain(args, curva, v1, v2, dl):
     width = args['HTS_signle_width']
     thickness = args['HTS_I_thickness']
     dl = np.mean(dl[:args['number_independent_coils']], axis=(1,2))
-    bend = HTS_strain_hard_bend(width, curva, v1)
+    hard_bend = HTS_strain_hard_bend(width, curva, v1)
     tor = HTS_strain_tor(width, dl, v1)
-    #easy_bend = HTS_strain_easy_bend(thickness, curva, v2)
-    return bend + tor
+    easy_bend = HTS_strain_easy_bend(thickness, curva, v2)
+    return hard_bend + tor + easy_bend
 
 def HTS_strain_hard_bend(width, curva, v):
     """弯曲应变,

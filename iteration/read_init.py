@@ -120,7 +120,6 @@ def init_I(args):
         
     args['I_normalize'] = I[0]
     I_init = I / I[0]
-    print(I_init)
     return args, I_init
 
 
@@ -146,7 +145,7 @@ def coil_init(args, surface_data):
     
     ## 有限截面旋转角
     if args['init_fr_case'] == 0:
-        fr_init = np.zeros((2, nic, args['number_fourier_rotate'])) 
+        fr_init = np.zeros((nic, 2, args['number_fourier_rotate'])) 
         
     elif args['init_fr_case'] == 1:
         file = args['init_fr_file'].split('.')

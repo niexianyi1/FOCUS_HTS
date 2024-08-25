@@ -35,12 +35,13 @@ def compute_coil_fourierSeries(nic, ns, nfc, coil):
         ys = ys.at[:, m].set(2.0 * np.sum(y * np.sin(m * theta), axis=1) / ns)
         zs = zs.at[:, m].set(2.0 * np.sum(z * np.sin(m * theta), axis=1) / ns)
     fc = np.asarray([xc, yc, zc, xs, ys, zs])  # 6 x nic x nfc
+    fc = np.transpose(fc, (1, 0, 2))
     return fc  
 
 def compute_r_centroid(fc, nfc, nic, ns):
     """ Computes the position of the winding pack centroid using the coil fourier series """
     theta = np.linspace(0, 2 * pi, ns + 1)
-    xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
+    xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x = np.zeros((nic, ns + 1))
     y = np.zeros((nic, ns + 1))
     z = np.zeros((nic, ns + 1))
@@ -60,7 +61,7 @@ def compute_r_centroid(fc, nfc, nic, ns):
 
 def compute_der1(fc, nfc, nic, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
-    xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
+    xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x1 = np.zeros((nic, ns + 1))
     y1 = np.zeros((nic, ns + 1))
     z1 = np.zeros((nic, ns + 1))
@@ -80,7 +81,7 @@ def compute_der1(fc, nfc, nic, ns):
 
 def compute_der2(fc, nfc, nic, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
-    xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
+    xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x2 = np.zeros((nic, ns + 1))
     y2 = np.zeros((nic, ns + 1))
     z2 = np.zeros((nic, ns + 1))
@@ -101,7 +102,7 @@ def compute_der2(fc, nfc, nic, ns):
 
 def compute_der3(fc, nfc, nic, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
-    xc, yc, zc, xs, ys, zs = fc[0], fc[1], fc[2], fc[3], fc[4], fc[5]
+    xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
     x3 = np.zeros((nic, ns + 1))
     y3 = np.zeros((nic, ns + 1))
     z3 = np.zeros((nic, ns + 1))

@@ -23,7 +23,7 @@ def plot(args, coil_all, loss_end, lossvals, params, surface_data):
         args : dict, 参数总集
         coil : array,[nc,ns,nn,nb,3], 优化后线圈坐标
         lossvals : list,[ni], 迭代数据
-        params : list,[fc,fr], 优化后参数
+        params : list,[fc,fr,I], 优化后参数
         I : array,[nc], 每个线圈电流数据
 
     Returns:
@@ -47,7 +47,7 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
 
     Args:
         args : dict, 参数总集
-        params : list,[fc,fr], 优化后参数
+        params : list,[fc,fr, I], 优化后参数
         
     Returns:
         plot_coil == 1 : 线圈曲线, 可以画有限截面的多根曲线

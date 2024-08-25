@@ -16,11 +16,11 @@ args = {
 # 优化
     # 优化目标
     'coil_optimize':            1,          #       int,    是否优化线圈位置, 0为否, 1为是
-    'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
+    'alpha_optimize':           0,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
     'I_optimize':               0,          #       int,    是否优化电流, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'jax',     #       str,    优化方式, 'jax', 'min', 'nlopt', #'for-min', 'min-for'
+    'iter_method':              'nlopt',     #       str,    优化方式, 'jax', 'min', 'nlopt',
     
     # 优化算法参数:minimize
     'minimize_method':          'CG',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
@@ -52,7 +52,7 @@ args = {
     
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
-    'init_coil_option':         'coordinates',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
+    'init_coil_option':         'circle',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
     
     'circle_coil_radius':       1.3,        #       float,  'circle' 的初始半径   
     'coil_file_type':           'npy',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
@@ -80,8 +80,8 @@ args = {
     'length_calculate':         0,          #       int,    0：手动给出截面大小, 1：由超导线圈临界电流给出截面大小
     'length_normal':            [0.16 for i in range(5)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
     'length_binormal':          [0.16 for i in range(5)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
-    'number_normal':            2,          # (nn)  int,    有限截面下的法向线圈数量                     
-    'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量                    
+    'number_normal':            1,          # (nn)  int,    有限截面下的法向线圈数量                     
+    'number_binormal':          1,          # (nb)  int,    有限截面下的副法向线圈数量                    
                      
     # 旋转角参数
     'init_fr_case':             0,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
@@ -122,27 +122,25 @@ args = {
     'HTS_structural_percent':   0.03,       #       float,  超导线缆与结构材料的比例
 
 # loss function 目标和权重
-
-    # 权重设置
-    'weight_normalization':     0,          #       int,    是否归一化权重 wi*fi = weight
     
+    'weight_normalization':     1,
     # 权重
     'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
     'weight_length':            0.001,          # (wl)  float,  单根线圈平均长度 
-    'weight_curvature':         0.0005,          # (wc)  float,  曲率 
-    'weight_curvature_max':     0.01,          # (wcm) float,  最大曲率
-    'weight_torsion':           0.0005,          # (wt)  float,  扭转 
-    'weight_torsion_max':       0.01,          # (wtm) float,  最大扭转
-    'weight_distance_coil_coil':    0.001,      # (wdcc)float,  线圈间距 
-    'weight_distance_coil_surface': 0.001,      # (wdcs)float,  线圈与磁面距离 
+    'weight_curvature':         0,          # (wc)  float,  曲率 
+    'weight_curvature_max':     0,          # (wcm) float,  最大曲率
+    'weight_torsion':           0,          # (wt)  float,  扭转 
+    'weight_torsion_max':       0,          # (wtm) float,  最大扭转
+    'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
+    'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
     'weight_HTS_strain':            0,          #       float,  应变量
     'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
     # 目标
-    'target_length_mean':            8.5,          #       float,  目标长度, 若为0则约束其较小
+    'target_length_mean':            0,          #       float,  目标长度, 若为0则约束其较小
     'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
-                            [1.5,1.5,1.5,1.5],
+                            [0,1.5,1.5,1.5],
     'target_curvature_max':     2.36,          #       float,  目标最大曲率
     'target_torsion_max':       5,          #       float,  目标最大扭转
     'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
@@ -157,12 +155,12 @@ args = {
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/w7x/w7x_start/f0.h5',   
+        'results/test/lossno_test/f2n4_1.h5',   
 
 # 简单画图(更多功能可在后处理post/post_plot.py中进行)
 
     # 画图选项
-    'plot_coil':                0,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
+    'plot_coil':                11,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
     'plot_loss':                0,          #       int,    是否画迭代曲线, 0：不画, 1：画
     'plot_poincare':            0,          #       int,    是否画poincare图, 0：不画, 1：画
 
