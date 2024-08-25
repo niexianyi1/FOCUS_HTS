@@ -435,6 +435,7 @@ class CoilSet:
         return curva
 
 
+
     def get_fb_input(self, params):
         coil_arg, fr, I = params   
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  

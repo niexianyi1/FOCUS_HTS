@@ -7,7 +7,7 @@ import h5py
 import coilpy
 import post_coilset
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import spline
 import fourier
 import lossfunction
@@ -36,14 +36,15 @@ def plot_loss(lossfile):
     fig = go.Figure()
     fig.add_scatter(x = np.arange(0, len(lossvals), 1), y = lossvals, 
                         name = 'lossvalue', line = dict(width=5))
-    fig.update_xaxes(title_text = "iteration",title_font = {"size": 25},title_standoff = 12, 
+    fig.update_xaxes(title_text = "opt_coil",title_font = {"size": 25},title_standoff = 12, 
                         tickfont = dict(size=25))
     fig.update_yaxes(title_text = "lossvalue",title_font = {"size": 25},title_standoff = 12, 
                         tickfont = dict(size=25) ,type="log", exponentformat = 'e')
     fig.show()
     return
 
-def plot_surface_0(arge):
+def plot_surface_0(filename):
+    arge = read_hdf5(filename)
     rs = arge['surface_data_r'][0]
     fig = go.Figure()
     fig.add_scatter3d(x=rs[:, 0],y=rs[:, 1],z=rs[:, 2], name='surface0', mode='markers', marker_size = 1.5)   
@@ -51,7 +52,8 @@ def plot_surface_0(arge):
     fig.show()
     return
 
-def plot_surface_all(arge):
+def plot_surface_all(filename):
+    arge = read_hdf5(filename)
     rs = arge['surface_data_r']
     rs = np.reshape(rs, (arge['number_zeta']*arge['number_theta'],3))
     fig = go.Figure()
@@ -61,7 +63,8 @@ def plot_surface_all(arge):
     return
 
 
-def plot_coil_0(arge):
+def plot_coil_0(filename):
+    arge = read_hdf5(filename)
     nic = arge['number_independent_coils']  
     nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1))  
     rs = arge['surface_data_r']
@@ -106,7 +109,8 @@ def plot_coil_0(arge):
 
 
 
-def plot_coil(arge):
+def plot_coil(filename):
+    arge = read_hdf5(filename)
     nic = arge['number_independent_coils']  
     nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1))  
     rs = arge['surface_data_r']
@@ -155,7 +159,8 @@ def plot_coil(arge):
     fig.show()
     return
 
-def plot_segment(arge):
+def plot_segment(filename):
+    arge = read_hdf5(filename)
     coil = arge['coil_centroid']
     nic = arge['number_independent_coils'] 
     ns = int(np.floor(arge['number_segments'] / 10))
@@ -171,7 +176,8 @@ def plot_segment(arge):
     return
 
 
-def plot_alpha(arge):
+def plot_alpha(filename):
+    arge = read_hdf5(filename)
     alpha = arge['coil_alpha']
     fig = go.Figure()
     for i in range(5):
@@ -185,7 +191,8 @@ def plot_alpha(arge):
     return
 
 
-def plot_coil_compare(arge, coilfile):    # 线圈
+def plot_coil_compare(filename, coilfile):    # 线圈
+    arge = read_hdf5(filename)
     oldcoil_arge = read_hdf5(coilfile) 
     nic = arge['number_independent_coils']  
     nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1))+1
@@ -250,7 +257,8 @@ def plot_coil_compare(arge, coilfile):    # 线圈
 
 
 
-def plot_strain(arge):
+def plot_strain(filename):
+    arge = read_hdf5(filename)
 
     if arge['coil_case'] == 'spline':
         arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
@@ -309,7 +317,8 @@ def plot_strain(arge):
     return 
 
 
-def plot_strain_compare(arge, coilfile):
+def plot_strain_compare(filename, coilfile):
+    arge = read_hdf5(filename)
     oldcoil_arge = read_hdf5(coilfile) 
     arge['length_normal'] = [0.001 for i in range(4)]
     oldcoil_arge['length_normal'] = [0.001 for i in range(4)]
@@ -408,7 +417,8 @@ def plot_strain_compare(arge, coilfile):
     return
 
 
-def plot_surface(arge):
+def plot_surface(filename):
+    arge = read_hdf5(filename)
     # oldcoil_arge = read_hdf5('results/w7x/w7x.h5') 
     nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1)) +1 
     rs = arge['surface_data_r']
@@ -485,7 +495,8 @@ def plot_surface(arge):
     return 
 
 
-def plot_surface_compare(arge, coilfile):
+def plot_surface_compare(filename, coilfile):
+    arge = read_hdf5(filename)
     oldcoil_arge = read_hdf5(coilfile) 
     if arge['coil_case'] != 'fourier':
         arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
@@ -584,20 +595,20 @@ def plot_surface_compare(arge, coilfile):
     return
 
 
-filename = 'results/LQA/non_circle_start/fourier/fsj3_1.f5'
-arge = read_hdf5(filename)
-# plot_surface_0(arge)
-# plot_coil(arge)
-# plot_coil_0(arge)
-# plot_segment(arge)
-# plot_surface(arge)
-# plot_alpha(arge)
-# plot_strain(arge)
+filename = 'results/LQA/circle_start/fourier/alpha/f9n10_s8_3.h5'
+
+# plot_surface_0(filename)
+# plot_coil(filename)
+# plot_coil_0(filename)
+# plot_segment(filename)
+plot_surface(filename)
+# plot_alpha(filename)
+# plot_strain(filename)
 
 coilfile = 'results/LQA/useful/cs_fn_4_b.h5'
-# plot_coil_compare(arge, coilfile)
-# plot_surface_compare(arge, coilfile)
-plot_strain_compare(arge, coilfile)
+# plot_coil_compare(filename, coilfile)
+# plot_surface_compare(filename, coilfile)
+# plot_strain_compare(filename, coilfile)
 
 # lossfile = 'results/ellipse/lossCG3/loss.npy'
 # plot_loss(lossfile)

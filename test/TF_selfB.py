@@ -4,7 +4,7 @@ import jax.numpy as np
 import plotly.graph_objects as go
 sys.path.append('HTS')
 from material_jcrit import get_critical_current
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import read_init
 
 sys.path.append('test')

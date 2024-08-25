@@ -3,8 +3,8 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('iteration')
-import main
+sys.path.append('opt_coil')
+import optimize
 # 待添加：电流优化项, 磁面数据生成
 args = {
 
@@ -38,7 +38,6 @@ args = {
     'number_coils':             18,         # (nc)  int,    线圈总数                    
     'number_field_periods':     3,          # (nfp) int,    线圈周期数                     
     'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 3,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
     'number_segments':          210,         # (ns)  int,    每个线圈分段数                     
      
 
@@ -46,7 +45,6 @@ args = {
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
     'init_coil_option':         'coil',     #       str,    初始线圈参数的来源, 'spline' or 'coil' or 'fourier' or 'circle'
     'circle_coil_radius':       1.0,        #       float,  生成初始的线圈半径   
-    'coil_file_type':           'npy',      #       str,    初始线圈文件类型, 'npy' or 'makegrid', 后续可以再加
     'init_coil_file':                       #       str,    初始线圈文件名
             'initfiles/qas/coils_3.npy',       
 
@@ -193,5 +191,5 @@ with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 
-main.main()
+optimize.main()
 

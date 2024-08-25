@@ -3,7 +3,7 @@ from jax import jit, vmap
 import numpy
 from jax import config
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import fourier
 import spline
 import lossfunction

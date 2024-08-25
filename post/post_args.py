@@ -37,7 +37,7 @@ import plotly.graph_objects as go
 import jax.numpy as np
 import h5py
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import read_init
 
 def read_hdf5(filename):
@@ -66,10 +66,12 @@ target = ['target_length_mean', 'target_curvature_max', 'target_torsion_max', 't
 'target_distance_coil_surface', 'target_HTS_strain']
 # for key in list(iter):
 #     print(arge['{}'.format(key)])
-# for key in list(weight):
-#     print(arge['{}'.format(key)])
-for key in list(losskeys):
-    print("{} = ".format(key), arge['{}'.format(key)])
+for key in list(weight):
+    print(arge['{}'.format(key)])
+for key in list(target):
+    print(arge['{}'.format(key)])
+# for key in list(losskeys):
+#     print("{} = ".format(key), arge['{}'.format(key)])
 
 
 

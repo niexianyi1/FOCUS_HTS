@@ -8,7 +8,7 @@ from jax import value_and_grad, jit
 from jax.config import config
 import scipy.interpolate as si 
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import fourier
 import spline
 import read_init

@@ -58,3 +58,12 @@ fcc = fcc.at[4].set(fc[3])
 fcc = fcc.at[5].set(fc[5])
 print(fcc)
 np.save('initfiles/hsx/fc_HSX.npy', fcc)
+
+
+
+
+
+# from coilpy import vmec2focus
+# vmec2focus(' initfiles/ncsx_c09r00/wout_c09r00_fb.nc', 
+#         focus_file=' initfiles/ncsx_c09r00/c09r00.boundary', 
+#         bnorm_file=' initfiles/ncsx_c09r00/bnorm.c09r00_fb')

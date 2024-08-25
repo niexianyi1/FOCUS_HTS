@@ -4,7 +4,7 @@ import jax.numpy as np
 from jax import jit, vmap
 import plotly.graph_objects as go
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import read_init
 import fourier
 import spline

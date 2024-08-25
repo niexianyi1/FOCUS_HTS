@@ -2,7 +2,7 @@
 import jax.numpy as np
 import h5py
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import spline
 sys.path.append('post')
 import post_coilset

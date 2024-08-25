@@ -4,7 +4,7 @@ import material_jcrit
 import hts_strain
 import B_self
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import coilset  
 
 

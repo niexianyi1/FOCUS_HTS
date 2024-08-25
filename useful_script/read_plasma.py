@@ -6,7 +6,7 @@ import jax.numpy as np
 import plotly.graph_objects as go
 import json
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import fourier
 with open('initfiles/init_args.json', 'r') as f:    # 传入地址
     args = json.load(f)

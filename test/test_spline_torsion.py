@@ -7,7 +7,7 @@ import json
 import plotly.graph_objects as go
 import scipy.interpolate as si
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import spline
 import fourier
 

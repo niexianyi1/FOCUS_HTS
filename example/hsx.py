@@ -3,8 +3,8 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('iteration')
-import main
+sys.path.append('opt_coil')
+import optimize
 # 待添加：电流优化项, 磁面数据生成
 args = {
 
@@ -212,5 +212,5 @@ with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 
-main.main()
+optimize.main()
 

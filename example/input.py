@@ -3,8 +3,8 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('iteration')
-import main
+sys.path.append('opt_coil')
+import optimize
 # 待添加：电流优化项, 磁面数据生成
 args = {
 
@@ -29,7 +29,7 @@ args = {
     # 优化算法参数:nlopt
     'nlopt_algorithm':          'LD_MMA',     #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
     'stop_criteria':             1e-4,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
-    'inequality_constraint':    's',
+    'inequality_constraint_strain': 0,      #       int,    是否开启不等式约束
 
     # 优化算法参数:jax, 通过设置迭代步长是否为0可以控制优化
     'number_iteration':         0,        # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
@@ -46,8 +46,7 @@ args = {
     # 线圈参数
     'number_coils':             50,         # (nc)  int,    线圈总数                    
     'number_field_periods':     5,          # (nfp) int,    线圈周期数                     
-    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 5,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
+    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                                      
     'number_segments':          64,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
@@ -132,6 +131,7 @@ args = {
     'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
+
     # 目标
     'target_length_mean':            0,          #       float,  目标长度, 若为0则约束其较小
     'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
@@ -208,5 +208,5 @@ with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 
-main.main()
+optimize.main()
 

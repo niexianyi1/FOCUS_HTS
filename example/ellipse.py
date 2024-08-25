@@ -3,8 +3,8 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('iteration')
-import main
+sys.path.append('opt_coil')
+import optimize
 # 待添加：电流优化项, 磁面数据生成
 args = {
 
@@ -54,7 +54,6 @@ args = {
     'number_coils':             16,         # (nc)  int,    线圈总数                    
     'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
     'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 4,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
     'number_segments':          64,         # (ns)  int,    每个线圈分段数                     
 
     # Fourier表示
@@ -183,5 +182,5 @@ with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 
-main.main()
+optimize.main()
 

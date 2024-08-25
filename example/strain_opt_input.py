@@ -3,7 +3,7 @@
 ## 写为字典格式,存为json文件
 import sys
 import json
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import strain_opt
 # 待添加：电流优化项, 磁面数据生成
 args = {
@@ -18,7 +18,7 @@ args = {
     'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'min',     #       str,    优化方式, 'min', 'nlopt'
+    'iter_method':              'nlopt',     #       str,    优化方式, 'min', 'nlopt'
     
     # 优化算法参数:minimize
     'minimize_method':          'BFGS',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
@@ -26,12 +26,9 @@ args = {
 
     # 优化算法参数:nlopt
     'nlopt_algorithm':          'LD_MMA',     #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
-    'stop_criteria':             1e-8,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
-    'inequality_constraint':    'strain',
+    'stop_criteria':             1e-4,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
                   
-
 # 线圈
-
     # 线圈参数 # 不变，还是按照所有线圈填写
     'number_coils':             16,         # (nc)  int,    线圈总数                    
     'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
@@ -40,19 +37,51 @@ args = {
     'number_segments':          128,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
-    'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
+    'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier'
     'init_coil_option':         'fourier',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier'
     'coil_file_type':           'hdf5',      #       str,    非'circle'的初始线圈文件类型, 'npy', 'hdf5' or 'makegrid', 后续可以再加
-    
-    # 线圈文件
     'init_coil_file':                       #       str,    初始线圈文件名
-            'results/LQA/non_circle_start/fourier/fsm4_1.h5',       
+            'results/LQA/useful/cs_fn_4_t.h5',       
 
     # Fourier表示
     'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
                      
     # Bspline表示
     'number_control_points':    32,         # (ncp) int,    每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合                   
+                     
+    # 旋转角参数
+    'init_fr_case':             1,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
+    'init_fr_file':                         #       str,    给出变量fr的初始值文件, 后缀'h5','npy'
+            'results/LQA/useful/cs_fn_4_t.h5',               
+    'number_rotate':            0,          # (nr)  int,    描述线圈绕组组的半旋转数的整数,通常设为0                    
+    'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数 
+
+# LTS/HTS材料(为方便下列参数都以HTS命名)
+    'material':                 'REBCO_LT',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
+    'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 不包括相邻间隙
+    'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 不包括相邻间隙
+    
+# loss function 目标和权重
+    'target_HTS_strain':            0.004,      #  float,  目标最大应变
+
+# 结果保存
+    # 输出选项,  0：不保存, 1：保存, 
+    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
+
+    # 输出地址
+    'out_hdf5':                             #       str,    hdf5, 输出参数
+        'results/LQA/non_circle_start/strain_opt/single/fsn4_1.h5',   
+
+                    
+
+# -------------------------------------- 不常变参数 ------------------------------------ #
+# ------------------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------------- #
+    'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
+    # 优化算法参数:jax,              
+    'var':                      0.999,      # adam优化方法的参数
+    'eps':                      1e-8,       # adam优化方法的参数
+
 
     # Bspline局部优化
     'optimize_location_nic':    [0],      #       list,   局部优化的线圈位置, 由列表给出进行局部优化的线圈是第几个, 第一个线圈从0开始   
@@ -67,13 +96,8 @@ args = {
     'length_normal':            [0.001 for i in range(3)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
     'length_binormal':          [0.05 for i in range(3)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
     'number_normal':            2,          # (nn)  int,    有限截面下的法向线圈数量                     
-    'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量                    
-                     
-    # 旋转角参数
-    'init_fr_case':             1,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
-    'init_fr_file':                         #       str,    给出变量fr的初始值文件
-            'results/LQA/non_circle_start/fourier/fsm4_1.h5',               
-   
+    'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量  
+
 # 电流
 
     # 电流初始
@@ -98,75 +122,7 @@ args = {
     'Bn_extern':                 0,          #       int,    背景磁场设置, 0:无, 1:boundary文件
     'Bn_extern_file':                        #       str,    读取对应的文件
             'initfiles/ncsx_c09r00/c09r00.boundary',
-
-# LTS/HTS材料(为方便下列参数都以HTS命名)
-
-    'material':                 'REBCO_LT',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
-    'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 不包括相邻间隙
-    'HTS_temperature':          4.2,        # (T)   float,  HTS材料温度, 单位K
-    'HTS_I_percent':            0.6,        #       float,  线圈电流与超导临界电流的比例,也是临界电流的约束值
-    'HTS_structural_percent':   0.01,       #       float,  超导线缆与结构材料的比例
-
-# loss function 目标和权重
-
-    # 权重设置
-    'weight_normalization':     0,          #       int,    是否归一化权重 wi*fi=weight
-
-    # 权重
-    'weight_bnormal':           0,          # (wb)  float,  法向磁场分量, 一般设为1
-    'weight_length':            0,          # (wl)  float,  单根线圈平均长度 
-    'weight_curvature':         0,          # (wc)  float,  曲率 
-    'weight_curvature_max':     0,          # (wcm) float,  最大曲率
-    'weight_torsion':           0,          # (wt)  float,  扭转 
-    'weight_torsion_max':       0,          # (wtm) float,  最大扭转
-    'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
-    'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
-    'weight_HTS_strain':            1,          #       float,  应变量
-    'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
-    'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
-
-    # 目标
-    'target_length_mean':            0,         #  float,  目标长度, 若为0则约束其较小
-    'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
-                            [5.08, 5.02, 4.91, 4.8],
-    'target_curvature_max':     2.36,           #  float,  目标最大曲率
-    'target_torsion_max':       5,              #  float,  目标最大扭转
-    'target_distance_coil_coil':    0.25,       #  float,  目标最大线圈间距
-    'target_distance_coil_surface': 0.44,       #  float,  目标最大线圈与磁面距离
-    'target_HTS_strain':            0,      #  float,  目标最大应变
-    'target_HTS_force':             0,          #  float, 目标最大受力
-
-# 结果保存
-
-    # 输出选项,  0：不保存, 1：保存, 
-    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
-
-    # 输出地址
-    'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/LQA/non_circle_start/fourier/fsm4_2.h5',   
-
-# 简单画图(更多功能可在后处理post/post_plot.py中进行)
-
-    # 画图选项
-    'plot_coil':                21,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
-    'plot_loss':                0,          #       int,    是否画迭代曲线, 0：不画, 1：画
-    'plot_poincare':            0,          #       int,    是否画poincare图, 0：不画, 1：画
-
-    # 画线圈
-    'number_points':            500,        # (nps) int,    画线圈时的散点数, 建议不少于线圈段数
-
-    # 画poincare图
-    'poincare_number':          25,         # (pn)      int,    画poincare图时的磁面圈数                         
-
-# ------------ 不常变参数 ------------ #
-    'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
-    # 优化算法参数:jax,              
-    'var':                      0.999,      # adam优化方法的参数
-    'eps':                      1e-8,       # adam优化方法的参数
-
-    # 旋转角参数
-    'number_rotate':            0,          # (nr)  int,    描述线圈绕组组的半旋转数的整数,通常设为0                    
-    'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数    
+   
 
     # 读取磁面文件, 若'surface_case': 1,
     'surface_r_file':                       #       str,    磁面坐标文件
@@ -177,9 +133,35 @@ args = {
             'initfiles/w7x/highres_sg_surf.npy',
 
     # LTS/HTS材料
-    'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 不包括相邻间隙
+    'HTS_temperature':          4.2,        # (T)   float,  HTS材料温度, 单位K
+    'HTS_I_percent':            0.6,        #       float,  线圈电流与超导临界电流的比例,也是临界电流的约束值
+    'HTS_structural_percent':   0.01,       #       float,  超导线缆与结构材料的比例
     'HTS_I_thickness':          1.2e-6,     #       float,  HTS材料导电层厚度
     'HTS_sec_area':             4.8e-9,     #       float,  HTS材料截面积（厚度*宽度或pi*(w/2)**2）
+
+    # 权重设置
+    'weight_normalization':     0,          #       int,    是否归一化权重 wi*fi=weight
+
+    'weight_bnormal':           0,          # (wb)  float,  法向磁场分量, 一般设为1
+    'weight_length':            0,          # (wl)  float,  单根线圈平均长度 
+    'weight_curvature':         0,          # (wc)  float,  曲率 
+    'weight_curvature_max':     0,          # (wcm) float,  最大曲率
+    'weight_torsion':           0,          # (wt)  float,  扭转 
+    'weight_torsion_max':       0,          # (wtm) float,  最大扭转
+    'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
+    'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
+    'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角  
+    # 目标
+    'target_length_mean':            0,         #  float,  目标长度, 若为0则约束其较小
+    'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
+                            [5.08, 5.02, 4.91, 4.8],
+    'target_curvature_max':     2.36,           #  float,  目标最大曲率
+    'target_torsion_max':       5,              #  float,  目标最大扭转
+    'target_distance_coil_coil':    0.25,       #  float,  目标最大线圈间距
+    'target_distance_coil_surface': 0.44,       #  float,  目标最大线圈与磁面距离
+    'target_HTS_force':             0,          #  float, 目标最大受力
+
 
     # 画poincare图                        
     'poincare_phi0':            0,          # (phi0)float,  画poincare图时的环向坐标
@@ -192,7 +174,18 @@ args = {
     # 输出地址    
     'out_coil_makegrid':                    #       str,    makegrid , 输出线圈
         'results/w7x/compare/filameat/makegrid',                
+# 简单画图(更多功能可在后处理post/post_plot.py中进行)
 
+    # 画图选项
+    'plot_coil':                0,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
+    'plot_loss':                0,          #       int,    是否画迭代曲线, 0：不画, 1：画
+    'plot_poincare':            0,          #       int,    是否画poincare图, 0：不画, 1：画
+
+    # 画线圈
+    'number_points':            500,        # (nps) int,    画线圈时的散点数, 建议不少于线圈段数
+
+    # 画poincare图
+    'poincare_number':          25,         # (pn)      int,    画poincare图时的磁面圈数     
 }
 
 

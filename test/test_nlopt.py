@@ -5,7 +5,7 @@ import numpy
 from jax import value_and_grad
 import nlopt 
 import sys
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import fourier
 pi = np.pi
 

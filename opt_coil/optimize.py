@@ -9,8 +9,8 @@ import numpy
 import json
 import time
 import read_init
-from coilset import CoilSet   
-import lossfunction  
+from coilset import CoilSet    
+import lossfunction   
 import plot
 import save
 import sys
@@ -19,16 +19,6 @@ import hts_strain
 config.update("jax_enable_x64", True)
 config.update('jax_disable_jit', True)
 n = 0
-
-
-
-def loss_strain(args, coil_output_func, params):
-    _, dl, _, der1, der2, _, v1, v2, _ = coil_output_func(params)
-    curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
-    strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
-    strain_max = np.max(np.array([np.max(strain) - args['target_HTS_strain'], 0]))
-    return strain_max
-
 
 
 def main():
@@ -40,8 +30,28 @@ def main():
     # 获取初始数据
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
 
+    # loss计算准备
+    # coil_cal = CoilSet(args)
+    # args = coil_cal.get_fb_args(params)  
     loss_vals = []
     # 两种迭代函数
+    @jit
+    def objective_function_jax(args, opt_state_coil_arg, opt_state_fr, opt_state_I):
+        """
+        迭代过程, 通过value_and_grad得到导数值和loss值, 
+        """   
+        I = get_params_I(opt_state_I)
+        params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr), I)
+        coil_cal = CoilSet(args)
+        coil_output_func = coil_cal.cal_coil   
+        loss_val, gradient = value_and_grad(
+            lambda params :lossfunction.loss_value(args, coil_output_func, params, surface_data),
+            allow_int = True)(params)      
+        g_coil_arg, g_fr, g_I = gradient
+        opt_state_coil_arg = opt_update_coil_arg(i, g_coil_arg, opt_state_coil_arg)
+        opt_state_fr = opt_update_fr(i, g_fr, opt_state_fr)  
+        opt_state_I = opt_update_I(i, g_I, opt_state_I)  
+        return opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val
 
     @jit
     def objective_function_minimize(args, params):
@@ -51,7 +61,7 @@ def main():
         coil_cal = CoilSet(args)
         coil_output_func = coil_cal.cal_coil           
         loss_val, gradient = value_and_grad(
-            lambda params :loss_strain(args, coil_output_func, params),
+            lambda params :lossfunction.loss_value(args, coil_output_func, params, surface_data),
             allow_int = True)(params)    
         g = compute_grad(args, gradient)
         loss_vals.append(loss_val)
@@ -66,7 +76,7 @@ def main():
         coil_cal = CoilSet(args)
         coil_output_func = coil_cal.cal_coil           
         loss_val, gradient = value_and_grad(
-            lambda params :loss_strain(args, coil_output_func, params),
+            lambda params :lossfunction.loss_value(args, coil_output_func, params, surface_data),
             allow_int = True)(params)    
         if grad.size > 0:
             g = compute_grad(args, gradient)
@@ -75,6 +85,20 @@ def main():
         loss_vals.append(loss_val)
         print('iter = ', n, 'value = ', loss_val)
         return loss_val
+
+    def constrain_nlopt(params, grad):
+        params = list_to_params(params)   
+        coil_cal = CoilSet(args)
+        coil_output_func = coil_cal.cal_coil           
+        value, gradient = value_and_grad(
+            lambda params :hts_strain.cn(args, coil_output_func, params),
+            allow_int = True)(params)    
+        if grad.size > 0:
+            g = compute_grad(args, gradient)
+            grad[:] = list(numpy.array(g))
+        value = numpy.float64(value)    
+        print('constrain_value = ', value)
+        return value
 
 
     @jit
@@ -130,8 +154,27 @@ def main():
     # 迭代循环, 得到导数, 带入变量, 得到新变量
     # 分两种情况, 固定迭代次数、给定迭代目标残差
     start = time.time()
+
+    if args['iter_method'] == 'jax':
+        # 参数迭代算法        
+        opt_init_coil_arg, opt_update_coil_arg, get_params_coil_arg = read_init.args_to_op(
+            args, args['optimizer_coil'], args['step_size_coil'])
+        opt_init_fr, opt_update_fr, get_params_fr = read_init.args_to_op(
+            args, args['optimizer_alpha'], args['step_size_alpha'])
+        opt_init_I, opt_update_I, get_params_I = read_init.args_to_op(
+            args, args['optimizer_I'], args['step_size_I'])   
+        opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
+        opt_state_fr = opt_init_fr(fr_init)  
+        opt_state_I = opt_init_I(I_init[:-1])  
+        for i in range(args['number_iteration']):
+            opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = objective_function_jax(
+                args, opt_state_coil_arg, opt_state_fr, opt_state_I)
+            loss_vals.append(loss_val)
+            print('iter = ', i, 'value = ', loss_val)
+        params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr),
+                    get_params_I(opt_state_I))
     
-    if args['iter_method'] == 'min':
+    elif args['iter_method'] == 'min':
         params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
         res = minimize(lambda params :objective_function_minimize(args, params), params, jac=True, 
                 method = '{}'.format(args['minimize_method']), tol = args['minimize_tol'])
@@ -140,15 +183,16 @@ def main():
         params = list_to_params(params)   
    
     elif args['iter_method'] == 'nlopt':
-        for i in range(args['number_independent_coils']):
-            coil_arg_init, fr_init = coil_arg_init[i], fr_init[i]
-            params = np.append(np.append(coil_arg_init, fr_init), [])
-            opt = read_init.nlopt_op(args, params)
-            opt.set_min_objective(objective_function_nlopt)
-            opt.set_ftol_rel(args['stop_criteria'])
-            xopt = opt.optimize(params)
-            print('loss = ', opt.last_optimum_value())  
-            params = list_to_params(xopt)   
+        params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
+        opt = read_init.nlopt_op(args, params)
+        opt.set_min_objective(objective_function_nlopt)
+        if args['inequality_constrain_strain'] == 1:
+            opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
+        opt.set_ftol_rel(args['stop_criteria'])
+        xopt = opt.optimize(params)
+        print('loss = ', opt.last_optimum_value())  
+        params = list_to_params(xopt)   
+
 
     end = time.time()
     print('time cost = ', end - start)

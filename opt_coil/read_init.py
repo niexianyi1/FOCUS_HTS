@@ -28,6 +28,8 @@ def init(args):
         surface_data :  磁面数据
         # B_extern :    额外磁场, 一般为背景磁场
     """
+    args['number_independent_coils'] = (args['number_coils'] / 
+                    args['number_field_periods'] / (args['stellarator_symmetry'] + 1))
     args, surface_data = get_surface_data(args)
     args, coil_arg_init, fr_init = coil_init(args, surface_data)    # coil_arg：线圈参数, Fourier或spline表示
     args, I_init = init_I(args)
@@ -104,8 +106,8 @@ def init_I(args):
 
     """    
     nic = args['number_independent_coils']
-    if args['coil_file_type'] == 'makegrid':
-        I = args['makegrid_I']          
+    if 'makegrid_I' in args.keys():
+        I = args['makegrid_I']  
         
     else:
         current_I = args['current_I']
@@ -119,8 +121,8 @@ def init_I(args):
         if args['total_current_I'] != 0:
             assert args['total_current_I'] == np.sum(I)
         
-    args['I_normalize'] = I[0]
-    I_init = I / I[0]
+    args['I_normalize'] = I[-1]
+    I_init = I / I[-1]
     return args, I_init
 
 
@@ -141,8 +143,7 @@ def coil_init(args, surface_data):
     nic = args['number_independent_coils']
     nc = args['number_coils']
     ns = args['number_segments']
-    assert nic * args['number_field_periods'] * (args['stellarator_symmetry'] + 1) == args['number_coils'] 
-    
+
     surface, _, _ = surface_data
     
     ## 有限截面旋转角

@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import h5py
 from test_coil_cal import CoilSet
 import sys 
-sys.path.append('iteration')
+sys.path.append('opt_coil')
 import fourier
 sys.path.append('HTS')
 import B_self
@@ -92,7 +92,7 @@ print(force)
 fig = go.Figure()
 fig.add_scatter(x = np.arange(0, 200, 1), y = force[:, 0], 
                     name = 'lossvalue', line = dict(width=5))
-fig.update_xaxes(title_text = "iteration",title_font = {"size": 25},title_standoff = 12, 
+fig.update_xaxes(title_text = "opt_coil",title_font = {"size": 25},title_standoff = 12, 
                     tickfont = dict(size=25))
 fig.update_yaxes(title_text = "lossvalue",title_font = {"size": 25},title_standoff = 12, 
                     tickfont = dict(size=25) )

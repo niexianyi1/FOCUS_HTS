@@ -3,8 +3,8 @@
 ## 写为字典格式，存为json文件
 import sys
 import json
-sys.path.append('iteration')
-import main
+sys.path.append('opt_coil')
+import optimize
 # 待添加：电流优化项, 磁面数据生成
 args = {
 
@@ -46,8 +46,7 @@ args = {
     # 线圈参数
     'number_coils':             16,         # (nc)  int,    线圈总数                    
     'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
-    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
-    'number_independent_coils': 4,          # (nic) int,    独立线圈数(半周期线圈数), (nc=nfp*(ss+1)*nic)                     
+    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                                      
     'number_segments':          128,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
@@ -84,7 +83,7 @@ args = {
     'init_fr_case':             1,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
     'init_fr_file':                         #       str,    给出变量fr的初始值文件
             'results/LQA/non_circle_start/fourier/fsm4_1.h5',               
-   
+    'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数    
 # 电流
 
     # 电流初始
@@ -176,7 +175,7 @@ args = {
 
     # 旋转角参数
     'number_rotate':            0,          # (nr)  int,    描述线圈绕组组的半旋转数的整数,通常设为0                    
-    'number_fourier_rotate':    6,          # (nfr) int,    每个线圈的旋转的傅里叶分量的个数    
+    
 
     # 读取磁面文件, 若'surface_case': 1,
     'surface_r_file':                       #       str,    磁面坐标文件
@@ -211,5 +210,5 @@ with open('initfiles/init_args.json', 'w') as f:
     json.dump(args, f, indent=4)
 
 
-main.main()
+optimize.main()
 

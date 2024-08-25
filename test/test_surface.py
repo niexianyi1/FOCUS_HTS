@@ -3,7 +3,7 @@ import jax.numpy as np
 import json
 import sys 
 import plotly.graph_objects as go
-# sys.path.append('iteration')
+# sys.path.append('opt_coil')
 import useful_script.read_plasma as read_plasma
 
 
