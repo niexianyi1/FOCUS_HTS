@@ -27,14 +27,12 @@ def main():
         args = json.load(f)
     globals().update(args)
     
-    # 获取初始数据
+    # 获取初始数据, 优化从Line156开始
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
-
-    # loss计算准备
-    # coil_cal = CoilSet(args)
-    # args = coil_cal.get_fb_args(params)  
     loss_vals = []
-    # 两种迭代函数
+
+
+    # 三种迭代函数
     @jit
     def objective_function_jax(args, opt_state_coil_arg, opt_state_fr, opt_state_I):
         """
@@ -86,6 +84,8 @@ def main():
         print('iter = ', n, 'value = ', loss_val)
         return loss_val
 
+    ## 不等式约束
+    @jit
     def constrain_nlopt(params, grad):
         params = list_to_params(params)   
         coil_cal = CoilSet(args)
@@ -154,18 +154,18 @@ def main():
     # 迭代循环, 得到导数, 带入变量, 得到新变量
     # 分两种情况, 固定迭代次数、给定迭代目标残差
     start = time.time()
-
     if args['iter_method'] == 'jax':
         # 参数迭代算法        
         opt_init_coil_arg, opt_update_coil_arg, get_params_coil_arg = read_init.args_to_op(
-            args, args['optimizer_coil'], args['step_size_coil'])
+            args, args['optimizer'], args['step_size'])
         opt_init_fr, opt_update_fr, get_params_fr = read_init.args_to_op(
-            args, args['optimizer_alpha'], args['step_size_alpha'])
+            args, args['optimizer'], args['step_size'])
         opt_init_I, opt_update_I, get_params_I = read_init.args_to_op(
-            args, args['optimizer_I'], args['step_size_I'])   
+            args, args['optimizer'], args['step_size'])   
         opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
         opt_state_fr = opt_init_fr(fr_init)  
         opt_state_I = opt_init_I(I_init[:-1])  
+        
         for i in range(args['number_iteration']):
             opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = objective_function_jax(
                 args, opt_state_coil_arg, opt_state_fr, opt_state_I)

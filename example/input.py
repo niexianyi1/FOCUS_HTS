@@ -32,14 +32,10 @@ args = {
     'inequality_constraint_strain': 0,      #       int,    是否开启不等式约束
 
     # 优化算法参数:jax, 通过设置迭代步长是否为0可以控制优化
-    'number_iteration':         0,        # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
-    'optimizer_coil':           'momentum', # (opt) str,    线圈参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'optimizer_alpha':          'momentum', # (opt) str,    旋转参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'optimizer_I':              'momentum', # (opt) str,    电流参数迭代方法,  (sgd, gd, momentum, or adam)  
-    'step_size_coil':           1e-5,       #       float,  参数coil_arg, 迭代步长, 为0则不优化                      
-    'step_size_alpha':          1e-5,       #       float,  参数fr, 迭代步长, 为0则不优化
-    'step_size_I':              1,          #       float,  参数I, 迭代步长, 为0则不优化   
-    'momentum_mass':            0.9,        # (mom) float,  梯度下降的动量参数                       
+    'number_iteration':         0,        # (ni)  int,      优化器迭代次数（for循环）, 若为0, 则不迭代
+    'optimizer':                'momentum', # (opt) str,    参数迭代方法,  (sgd, gd, momentum, or adam)  
+    'step_size':                1e-5,       #       float,  参数迭代步长, 为0则不优化                      
+                     
 
 # 线圈
 
@@ -168,7 +164,8 @@ args = {
 
 
 # ------------ 不常变参数 ------------ #
-    # 优化算法参数:jax,              
+    # 优化算法参数:jax,       
+    'momentum_mass':            0.9,        # (mom) float,  梯度下降的动量参数         
     'var':                      0.999,      # adam优化方法的参数
     'eps':                      1e-8,       # adam优化方法的参数
 

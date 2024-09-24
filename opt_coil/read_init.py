@@ -347,6 +347,9 @@ def test(args, coil_arg_init):
         assert args['number_fourier_coils'] == coil_arg_init.shape[2]
     else :
         assert args['number_control_points'] == coil_arg_init.shape[2] + 3
+    
+    
+    assert args['number_independent_coils'] == coil_arg_init.shape[0]
 
     ## 线圈最小间距应大于截面的长度
     nlen = np.max(np.array(args['length_normal'])) * (args['number_normal'] - 1)
