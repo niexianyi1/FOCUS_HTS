@@ -19,8 +19,12 @@ class Strain_CoilSet:
 
     def __init__(self, args):
         self.args = args
-        self.coil_arg = args['coil_arg_i'][np.newaxis,:,:]
-        self.nic = 1
+        if 'coil_arg_i' in args.keys():
+            self.coil_arg = args['coil_arg_i'][np.newaxis,:,:]
+            self.nic = 1
+        else:
+            self.coil_arg = args['coil_arg']
+            self.nic = args['number_independent_coils'] 
         self.ns = args['number_segments']
         self.nr = args['number_rotate']
         self.nfc = args['number_fourier_coils']
@@ -206,30 +210,30 @@ class Strain_CoilSet:
         r_middle is a nc x ns x nn x nb x 3 array which computes the midpoint of each of the ns segments
 
         """
-
-        r = np.zeros((self.nic, self.nn, self.nb, self.ns, 3))
+        nn = self.args['number_normal']
+        nb = self.args['number_binormal']
+        ln = np.array(self.args['length_normal'])
+        lb = np.array(self.args['length_binormal'])
+        r = np.zeros((self.nic, nn, nb, self.ns, 3))
         r += coil_centroid[:, np.newaxis, np.newaxis, :, :]
-
-        for n in range(self.nn):
-            for b in range(self.nb):
+        print(ln)
+        for n in range(nn):
+            for b in range(nb):
                     r = r.at[:, n, b, :, :].add(
-                        (n - 0.5 * (self.nn - 1)) * self.ln[:, np.newaxis, np.newaxis] * v1 + 
-                        (b - 0.5 * (self.nb - 1)) * self.lb[:, np.newaxis, np.newaxis] * v2
+                        (n - 0.5 * (nn - 1)) * ln[:, np.newaxis, np.newaxis] * v1 + 
+                        (b - 0.5 * (nb - 1)) * lb[:, np.newaxis, np.newaxis] * v2
                     ) 
         return r
 
 
-    def compute_cd(self, coil_centroid, der1, der2):
+    def compute_cd(self, der1, der2):
         curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
-        deltal = np.zeros((self.nic, self.ns, 3))   
-        deltal = deltal.at[:, :-1, :].set(coil_centroid[:, 1:, :] - coil_centroid[:, :-1, :])
-        deltal = deltal.at[:, -1, :].set(coil_centroid[:, 0, :] - coil_centroid[:, -1, :])
-        return curva, deltal
-
+        return curva
     def get_coil(self, params):
         coil_arg, fr, I = params   
-        coil_centroid = Strain_CoilSet.compute_coil_centroid(self, coil_arg)  
-        der1, _, _, _ = Strain_CoilSet.compute_coil_der(self, coil_arg)   
+        self.coil_arg = coil_arg
+        coil_centroid = Strain_CoilSet.compute_coil_centroid(self)  
+        der1, _, _, _ = Strain_CoilSet.compute_coil_der(self)   
         tangent, normal, binormal = Strain_CoilSet.compute_com(self, der1, coil_centroid)
         centroid_frame = tangent, normal, binormal
         alpha = Strain_CoilSet.compute_alpha(self, fr)
@@ -240,13 +244,14 @@ class Strain_CoilSet:
 
     def get_plot_strain(self, params):
         coil_arg, fr, I = params  
-        coil_centroid = Strain_CoilSet.compute_coil_centroid(self, coil_arg)  
-        der1, der2, _, dt = Strain_CoilSet.compute_coil_der(self, coil_arg)   
+        self.coil_arg = coil_arg
+        coil_centroid = Strain_CoilSet.compute_coil_centroid(self)  
+        der1, der2, _, dt = Strain_CoilSet.compute_coil_der(self)   
         tangent, normal, binormal = Strain_CoilSet.compute_com(self, der1, coil_centroid)
         centroid_frame = tangent, normal, binormal
         alpha = Strain_CoilSet.compute_alpha(self, fr)
         v1, v2 = Strain_CoilSet.compute_frame(self, alpha, centroid_frame)
-        curva, deltal = Strain_CoilSet.compute_cd(self, coil_centroid, der1, der2)
+        curva = Strain_CoilSet.compute_cd(self, der1, der2)
         dl = der1[:, np.newaxis, np.newaxis, :, :] * dt
         strain = hts_strain.HTS_strain(self.args, curva, v1, v2, dl)
         return strain

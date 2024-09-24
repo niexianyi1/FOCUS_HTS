@@ -47,19 +47,19 @@ def HTS_strain_tor(width, dl, v):
 
     """
     eps = numpy.spacing(1)
-    cosv = np.zeros((v.shape[0], v.shape[1]))
-    cosv = cosv.at[:, :-1].set(np.sum(v[:, :-1, :] * v[:, 1:, :], axis=-1) ) # 此处分母都为1，省略
-    cosv = cosv.at[:, -1].set(np.sum(v[:, -1, :] * v[:, 0, :], axis=-1) )
-    if np.max(cosv) == 1 and np.min(cosv) > -1+1e-8:
-        cosv = cosv - eps
-    dtheta = np.arccos(cosv)
+    # cosv = np.zeros((v.shape[0], v.shape[1]))
+    # cosv = cosv.at[:, :-1].set(np.sum(v[:, :-1, :] * v[:, 1:, :], axis=-1) ) # 此处分母都为1，省略
+    # cosv = cosv.at[:, -1].set(np.sum(v[:, -1, :] * v[:, 0, :], axis=-1) )
+    # if np.max(cosv) == 1 and np.min(cosv) > -1+1e-8:
+    #     cosv = cosv - eps
+    # dtheta = np.arccos(cosv)
     
-    # sinv = np.zeros((v.shape[0], v.shape[1]))
-    # sinv = sinv.at[:, :-1].set(np.linalg.norm(np.cross(v[:, :-1, :], v[:, 1:, :]), axis = -1)) # 此处分母都为1，省略
-    # sinv = sinv.at[:, -1].set(np.linalg.norm(np.cross(v[:, -1, :], v[:, 0, :]), axis = -1))
-    # if np.min(sinv) == 0 and np.max(sinv) < 1-1e-8:
-    #     sinv = sinv + 1e-8
-    # dtheta = np.arcsin(sinv)
+    sinv = np.zeros((v.shape[0], v.shape[1]))
+    sinv = sinv.at[:, :-1].set(np.linalg.norm(np.cross(v[:, :-1, :], v[:, 1:, :]), axis = -1)) # 此处分母都为1，省略
+    sinv = sinv.at[:, -1].set(np.linalg.norm(np.cross(v[:, -1, :], v[:, 0, :]), axis = -1))
+    if np.min(sinv) == 0 and np.max(sinv) < 1-1e-8:
+        sinv = sinv + eps
+    dtheta = np.arcsin(sinv)
     dl = np.linalg.norm(dl, axis = -1)
     tor = width**2/12*(dtheta/dl)**2
     return tor

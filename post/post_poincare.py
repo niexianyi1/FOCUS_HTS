@@ -3,8 +3,9 @@ import h5py
 import coilpy
 import jax.numpy as np
 import plotly.graph_objects as go
-
-
+import sys
+sys.path.append('opt_coil')
+from poincare_trace import tracing
 
 
 def read_hdf5(filename):
@@ -20,7 +21,7 @@ def read_hdf5(filename):
 
 
 
-def plot_poincare(arge, oldline):
+def plot_poincare(arge):
 
     r_surf = arge['surface_data_r']
     pn = arge['poincare_number']
@@ -36,32 +37,29 @@ def plot_poincare(arge, oldline):
     r0 = [rmid+i*dr for i in range(pn)]
     z0 = [0 for i in range(pn)]
     coil = np.mean(arge['coil_r'], axis = (1,2))
-    print(r0)
-    # dl = np.mean(coil_all['coil_dl'], axis = (1,2))
     x = coil[:, :, 0]
     y = coil[:, :, 1]
     z = coil[:, :, 2]
     I = arge['coil_I'] 
-    name = group = np.ones((arge['number_coils']))
-    coil_py = coilpy.coils.Coil(x, y, z, I, name, group)
-    bfield = coil_py.bfield
-    arge['number_step'] = 10
-    line = coilpy.misc.tracing(bfield, r0, z0, arge['poincare_phi0'], 
-            arge['number_iter'], arge['number_field_periods'], arge['number_step'], )
-    # line = poincare_B.tracing(coil, dl, arge['poincare_r0'], arge['poincare_z0'], arge['poincare_phi0'], 
-    #         arge['number_iter'], arge['number_field_periods'], arge['number_step'])
+    # name = group = np.ones((arge['number_coils']))
+    # coil_py = coilpy.coils.Coil(x, y, z, I, name, group)
+    # bfield = coil_py.bfield
+    # arge['number_step'] = 10
+    # line = coilpy.misc.tracing(bfield, r0, z0, arge['poincare_phi0'], 
+    #         arge['number_iter'], arge['number_field_periods'], arge['number_step'], )
+
+    coil = arge['coil_r']
+    dl = arge['coil_dl']
+    line = tracing(coil, dl, I, r0, z0, arge['poincare_phi0'], 
+            arge['number_iter'], arge['number_field_periods'], arge['number_step'])
 
     line = np.reshape(line, (pn*(arge['number_iter']+1), 2))
-
-    old_line = np.load(oldline)
     
     fig = go.Figure()
     fig.add_scatter(x = line[:, 0], y = line[:, 1],  name='poincare', mode='markers', marker_size = 3)
-    fig.add_scatter(x = old_line[:, 0], y = old_line[:, 1],  name='old_poincare', mode='markers', marker_size = 3)
     fig.add_scatter(x = surf_r, y = surf_z,  name='surface', line = dict(width=2.5))
     fig.update_layout(scene_aspectmode='data')
     fig.show()
-
     return
 
 def plot_poincare_compare(arge,old_arge):
@@ -120,9 +118,9 @@ def plot_poincare_compare(arge,old_arge):
 filename = 'results/w7x/w7x.h5'
 oldline = 'results/poincare/w7x.npy'
 arge = read_hdf5(filename)
-arge['poincare_number'] = 15
+arge['poincare_number'] = 20
 arge['number_iter'] = 200
-plot_poincare(arge, oldline)
+plot_poincare(arge)
 
 # compare
 # oldfile = 'results/poincare/hsx.npy'

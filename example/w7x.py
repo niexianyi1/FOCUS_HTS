@@ -91,14 +91,14 @@ args = {
     'current_independent':      0,          #       int,    每个独立线圈是否拥有独立电流, 0:否, 1:是
     'current_I':                [1.62e6],      #       list,   线圈初始电流数值         
     'total_current_I':          0,          #       int,    电流优化时是否保持总电流不变, 
-        # 若为0, 则不设置总电流; 若不为0, 则为总电流数值
+        # 若为0, 则不设置总电流; 若不为0, 则为总电流数值,推荐设置
 
 # 磁面
     
     # 磁面参数
     'surface_case':             1,          #       int,    磁面数据来源, 0:直接读取文件, 1:计算vmec文件生成
     'number_theta':             40,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
-    'number_zeta':              128,        # (nz)  int,    磁面上\zeta(环向)的网格点数              
+    'number_zeta':              130,        # (nz)  int,    磁面上\zeta(环向)的网格点数              
     
     # vmec文件           
     'surface_vmec_file':                    #       str,    磁面数据的vmec文件
@@ -130,7 +130,8 @@ args = {
     'weight_distance_coil_coil':    0.001,      # (wdcc)float,  线圈间距 
     'weight_distance_coil_surface': 0.001,      # (wdcs)float,  线圈与磁面距离 
     'weight_HTS_strain':            0,          #       float,  应变量
-    'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_max':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_mean':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
     # 目标
@@ -142,7 +143,7 @@ args = {
     'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
     'target_distance_coil_surface': 0.44,      #       float,  目标最大线圈与磁面距离
     'target_HTS_strain':            0.0039,          #       float,  目标最大应变
-    'target_HTS_force':             0,            #       float, 目标最大受力
+    'target_HTS_force_max':             0,            #       float, 目标最大受力
 
 # 结果保存
 
@@ -151,7 +152,7 @@ args = {
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/w7x/w7x_start/f0.h5',   
+        'results/w7x/w7x.h5',   
 
 # 简单画图(更多功能可在后处理post/post_plot.py中进行)
 

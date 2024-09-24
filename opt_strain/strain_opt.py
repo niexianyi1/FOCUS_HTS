@@ -127,7 +127,7 @@ def main():
     end = time.time()
     print('time cost = ', end - start)
     
-
+    del args['coil_arg_i']
     params = (coil_arg_init, fr_total, I_init[:-1])
     # 得到优化后的线圈参数, 保存到文件中
     coil_cal = CoilSet(args)

@@ -483,6 +483,32 @@ class CoilSet:
         strain = hts_strain.HTS_strain(self.args, curva, v1, v2, dl)
         return strain
 
+    def get_plot_force(self, params):
+        coil_arg, fr, I = params  
+        if self.args['coil_case'] == 'spline_local':
+            coil_arg = CoilSet.local_coil(self, self.args['c_init'])
+        coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
+        der1, der2, der3, dt = CoilSet.compute_coil_der(self, coil_arg)   
+        tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
+        centroid_frame = tangent, normal, binormal
+        dTdt, dNdt, dBdt = CoilSet.compute_com_deriv(self, centroid_frame, der1, der2, coil_centroid)
+        alpha = CoilSet.compute_alpha(self, fr)
+        alpha1 = CoilSet.compute_alpha_1(self, fr)
+        v1, v2 = CoilSet.compute_frame(self, alpha, centroid_frame)
+        dv1_dt, dv2_dt = CoilSet.compute_frame_derivative(self, alpha, alpha1, centroid_frame, dNdt, dBdt)     
+        r = CoilSet.compute_r(self, v1, v2, coil_centroid)
+        dl = CoilSet.compute_dl(self, dv1_dt, dv2_dt, der1, dt)
+        curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
+        if self.ss == 1 :
+            r = CoilSet.stellarator_symmetry_coil(self, r)
+            dl = CoilSet.stellarator_symmetry_coil(self, dl)
+        r = CoilSet.symmetry_coil(self, r)
+        dl = CoilSet.symmetry_coil(self, dl)
+        
+        B_reg = B_self.coil_B_force(self.args, r, I, dl, v1, v2, binormal, curva, der2)
+        force = I[:self.nic, np.newaxis, np.newaxis] * np.cross(tangent, B_reg)
+        return force
+
 
     def get_plot_args(self, params):
         coil_arg, fr, I = params   

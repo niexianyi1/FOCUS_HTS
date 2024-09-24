@@ -25,8 +25,9 @@ def read_hdf5(filename):
 def plot_strain_compare(filename, coilfile):
     arge = read_hdf5(filename)
     oldcoil_arge = read_hdf5(coilfile) 
-    arge['length_normal'] = [0.001 for i in range(4)]
-    oldcoil_arge['length_normal'] = [0.001 for i in range(4)]
+    nic = arge['number_independent_coils'] 
+    arge['length_normal'] = [0.001 for i in range(nic)]
+    oldcoil_arge['length_normal'] = [0.001 for i in range(nic)]
 
     if arge['coil_case'] != 'fourier':
         arge['coil_arg'] = arge['coil_arg'][:, :, :-3]

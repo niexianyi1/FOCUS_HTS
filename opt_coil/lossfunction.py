@@ -26,11 +26,8 @@ def loss_value(args, coil_output_func, params, surface_data):
     I, dl, coil, der1, der2, der3, v1, v2, binormal = coil_output_func(params)
     curva = curvature(der1, der2)
     I = I * args['I_normalize']
-    weight = [  args['weight_bnormal'], args['weight_length'], args['weight_curvature'], 
-                args['weight_curvature_max'], args['weight_torsion'], args['weight_torsion_max'],
-                args['weight_distance_coil_coil'], args['weight_distance_coil_surface'],
-                args['weight_HTS_force'], + args['weight_HTS_Icrit'],  args['weight_HTS_strain']]
-    loss = [0 for i in range(11)]
+    weight, loss = weight_and_loss(args)
+
 
     if args['weight_bnormal'] != 0:
         Bn_mean, _, _, _ = quadratic_flux(args, I, dl, coil, surface_data)
@@ -67,11 +64,12 @@ def loss_value(args, coil_output_func, params, surface_data):
         dcs_min = -np.min(np.array([-args['target_distance_coil_surface']+dcs_min, 0]))
         loss[7] = dcs_min
 
-    if args['weight_HTS_force'] != 0:
+    if args['weight_HTS_force_max'] != 0 or args['weight_HTS_force_mean'] != 0:
         B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
-        force = calculate_force(I, B_reg, dl)
-        force = -np.min(np.array([force-args['target_HTS_force'], 0]))
-        loss[8] = force
+        force_max, force_mean = calculate_force(I, B_reg, dl)
+        force_max = np.max(np.array([force_max-args['target_HTS_force_max'], 0]))
+        loss[8] = force_max
+        loss[9] = force_mean
 
     if args['weight_HTS_Icrit'] != 0:
         strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
@@ -81,20 +79,20 @@ def loss_value(args, coil_output_func, params, surface_data):
         j_crit, _ = Jcrit(args, B_coil, strain, Bx, By)
         I_crit = Icrit(args, j_crit)
         loss_I = np.min(I_crit)
-        loss[9] = loss_I
+        loss[10] = loss_I
 
     if args['weight_HTS_strain'] != 0:
         strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
-        strain_max = np.max(np.array([np.max(strain) - args['target_HTS_strain'], 0]))
-        loss[10] = strain_max
+        strain_mean = np.mean(strain)
+        loss[11] = strain_mean
 
     loss = np.array(loss)
-##  if weight_normalization
-    if args['weight_normalization'] == 0:
+##  if loss_weight_normalization
+    if args['loss_weight_normalization'] == 0:
         lossvalue = np.sum(np.array(weight) * np.array(loss)
 )
-    if args['weight_normalization'] == 1:
-        for i in range(1, 11):
+    if args['loss_weight_normalization'] == 1:
+        for i in range(1, 12):
             if loss[i] == 0:
                 weight[i] = 0
             else:
@@ -102,6 +100,17 @@ def loss_value(args, coil_output_func, params, surface_data):
         lossvalue = np.sum(np.array(weight) * np.array(loss))
 
     return lossvalue
+
+
+def weight_and_loss(args):
+    weight = []
+    for key in args:
+        k = key.split('_')
+        if k[0] == 'weight':
+            weight.append(key)
+    l = len(weight)
+    loss = [0 for i in range(l)]
+    return weight, loss
 
 
 
@@ -132,7 +141,7 @@ def quadratic_flux(args, I, dl, coil, surface_data):
     top = np.cross(mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l)  # NC x NZ x NT x NNR x NBR x NS x 3
     bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NNR x NBR x NS
     B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5))  # NZ x NT x 3
-    
+
     Bmax = np.max(np.linalg.norm(B, axis=-1))
     bn = np.sum(nn * B, axis=-1)
     if args['Bn_extern'] != 0:
@@ -259,9 +268,10 @@ def calculate_force(I, B_reg, dl):  ### 应该除以每个线圈的长度
     dl = np.mean(dl[:nic], axis=(1,2))
     tan = dl / np.linalg.norm(dl, axis=-1)[:, :, np.newaxis]
     force = I[:nic, np.newaxis, np.newaxis] * np.cross(tan, B_reg)
-    force = np.linalg.norm(force, axis=-1)
-    force = np.max(force) 
-    return force
+    force_coil = force * np.linalg.norm(dl, axis=-1)[:, :, np.newaxis]
+    force_coil = np.sum(np.linalg.norm(np.sum(force_coil , axis=1),axis=-1)) / nic
+    force_max = np.max(np.linalg.norm(force, axis=-1))
+    return force_max, force_coil
 
 
 
@@ -289,7 +299,7 @@ def loss_save(args, coil_output_func, params, surface_data):
     strain_coil = np.max(strain, axis=1)
     strain_max = np.max(strain)
     B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
-    force = calculate_force(I, B_reg, dl)
+    force_max, force_mean = calculate_force(I, B_reg, dl)
     B_coil_theta = B_coil_normal(B_reg, v2)
     B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
     B_coil_max = np.max(np.linalg.norm(B_coil, axis=-1), axis = (1,2))
@@ -311,7 +321,8 @@ def loss_save(args, coil_output_func, params, surface_data):
     print('loss_dcc_min =  ', dcc_min, 'm')
     print('loss_dcs_min =  ', dcs_min, 'm')
     print('loss_strain_max =  ', strain_max)
-    print('loss_force =  ', force, 'N/m')
+    print('loss_force_max =  ', force_max, 'N/m')
+    print('loss_force_mean =  ', force_mean, 'N')
     print('loss_B_coil_max = ', B_coil_max, 'T')
     print('loss_HTS_Icrit = ', I_coil_crit, 'A')
     
@@ -327,7 +338,8 @@ def loss_save(args, coil_output_func, params, surface_data):
         'loss_tor_mean'     :   t_mean,
         'loss_tor_max'      :   t_max,
         'loss_B_coil_theta' :   B_coil_theta,
-        'loss_force'        :   force,
+        'loss_force_max'    :   force_max,
+        'loss_force_mean'   :   force_mean,
         'loss_Bn'           :   Bn,
         'loss_B'            :   B,
         'loss_curva'        :   curva,

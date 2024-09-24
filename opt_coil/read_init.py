@@ -28,7 +28,7 @@ def init(args):
         surface_data :  磁面数据
         # B_extern :    额外磁场, 一般为背景磁场
     """
-    args['number_independent_coils'] = (args['number_coils'] / 
+    args['number_independent_coils'] = int(args['number_coils'] / 
                     args['number_field_periods'] / (args['stellarator_symmetry'] + 1))
     args, surface_data = get_surface_data(args)
     args, coil_arg_init, fr_init = coil_init(args, surface_data)    # coil_arg：线圈参数, Fourier或spline表示
@@ -305,7 +305,6 @@ def get_finite_build_length(args, coil_arg_init, fr_init, I_init):
     if len(args['length_binormal']) != nic:
         lb = np.max(np.array(args['length_binormal']))
         args['length_binormal'] = [lb for i in range(nic)]  
-
     if args['length_calculate'] == 1:
         args = section_length.solve_section(args, coil_arg_init, fr_init, I_init)
         print('Complete section calculation.')

@@ -130,7 +130,7 @@ args = {
     'weight_distance_coil_coil':    0.001,      # (wdcc)float,  线圈间距 
     'weight_distance_coil_surface': 0.001,      # (wdcs)float,  线圈与磁面距离 
     'weight_HTS_strain':            0,          #       float,  应变量
-    'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_max':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
     # 目标
@@ -142,7 +142,7 @@ args = {
     'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
     'target_distance_coil_surface': 0.44,      #       float,  目标最大线圈与磁面距离
     'target_HTS_strain':            0.0039,          #       float,  目标最大应变
-    'target_HTS_force':             0,            #       float, 目标最大受力
+    'target_HTS_force_max':             0,            #       float, 目标最大受力
 
 # 结果保存
 

@@ -20,7 +20,7 @@ args = {
     'I_optimize':               0,          #       int,    是否优化电流, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'nlopt',     #       str,    优化方式, 'jax', 'min', 'nlopt',
+    'iter_method':              'jax',     #       str,    优化方式, 'jax', 'min', 'nlopt',
     
     # 优化算法参数:minimize
     'minimize_method':          'CG',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
@@ -44,10 +44,10 @@ args = {
 # 线圈
 
     # 线圈参数
-    'number_coils':             50,         # (nc)  int,    线圈总数                    
-    'number_field_periods':     5,          # (nfp) int,    线圈周期数                     
+    'number_coils':             16,         # (nc)  int,    线圈总数                    
+    'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
     'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                                      
-    'number_segments':          64,         # (ns)  int,    每个线圈分段数   
+    'number_segments':          80,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
@@ -117,7 +117,7 @@ args = {
 
 # loss function 目标和权重
     
-    'weight_normalization':     1,
+    'loss_weight_normalization':     1,
     # 权重
     'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
     'weight_length':            0.001,          # (wl)  float,  单根线圈平均长度 
@@ -128,7 +128,8 @@ args = {
     'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
     'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
     'weight_HTS_strain':            0,          #       float,  应变量
-    'weight_HTS_force':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_max':             0,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_mean':             0,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
 
 
@@ -141,7 +142,7 @@ args = {
     'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
     'target_distance_coil_surface': 0.44,      #       float,  目标最大线圈与磁面距离
     'target_HTS_strain':            0.0039,          #       float,  目标最大应变
-    'target_HTS_force':             0,            #       float, 目标最大受力
+    'target_HTS_force_max':             0,            #       float, 目标最大受力
 
 # 结果保存
 

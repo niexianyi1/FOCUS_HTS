@@ -404,7 +404,6 @@ class CoilSet:
             T = np.array([[np.cos(theta_t), -np.sin(theta_t), 0],
                  [np.sin(theta_t), np.cos(theta_t), 0], [0, 0, 1]])
             rc_total = rc_total.at[npc*(i+1):npc*(i+2), :, :, :, :].set(np.dot(r, T))
-        
         return rc_total
 
     def stellarator_symmetry_I(self, I):

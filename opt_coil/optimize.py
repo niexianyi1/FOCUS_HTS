@@ -186,7 +186,7 @@ def main():
         params = np.append(np.append(coil_arg_init, fr_init), I_init[:-1])
         opt = read_init.nlopt_op(args, params)
         opt.set_min_objective(objective_function_nlopt)
-        if args['inequality_constrain_strain'] == 1:
+        if args['inequality_constraint_strain'] == 1:
             opt.add_inequality_constraint(lambda params, grad:constrain_nlopt(params, grad), 1e-4)
         opt.set_ftol_rel(args['stop_criteria'])
         xopt = opt.optimize(params)

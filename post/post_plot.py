@@ -159,6 +159,69 @@ def plot_coil(filename):
     fig.show()
     return
 
+
+def plot_dcs(filename):
+    arge = read_hdf5(filename)
+    nic = arge['number_independent_coils']  
+    nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1))  
+    rs = arge['surface_data_r']
+    rs = rs[:nzs]
+    r_surf = np.zeros((nzs, arge['number_theta']+1, 3))
+    r_surf = r_surf.at[:,:-1,:].set(rs)
+    r_surf = r_surf.at[:,-1,:].set(rs[:,0,:])
+    lossB = arge['loss_B']
+    lossB = np.linalg.norm(lossB[:nzs], axis=-1)
+    B = np.zeros((nzs, arge['number_theta']+1))
+    B = B.at[:,:-1].set(lossB)
+    B = B.at[:,-1].set(lossB[:,0])
+
+
+
+    if arge['coil_case'] != 'fourier':
+        arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
+        bc, tj = spline.get_bc_init(arge['number_points'], arge['number_control_points'])
+        arge['bc'] = bc
+        arge['tj'] = tj
+
+    ns = arge['number_segments']
+
+    arge['number_segments'] = arge['number_points'] 
+    params = (arge['coil_arg'], arge['coil_fr'], arge['coil_I'])
+    coil_cal = post_coilset.CoilSet(arge)    
+    coil = coil_cal.get_coil(params)
+    arge['number_segments'] = ns
+
+    ns = arge['number_points']
+
+    coil = np.mean(coil, axis = (1,2))
+
+    dr = (coil[:nic, :, np.newaxis, np.newaxis, :] - rs[np.newaxis, np.newaxis, :, :, :])
+    dcs = np.min(np.linalg.norm(dr, axis = -1), axis=(2, 3))
+    print(dcs.shape)
+    dcs = np.reshape(dcs, (ns * nic))
+    coil = np.reshape(coil[:nic], (ns * nic, 3))
+
+    fig = go.Figure()
+    fig.add_scatter3d(x=coil[:, 0],y=coil[:, 1],z=coil[:, 2], name='newcoil', 
+                mode='markers', marker = dict(size=1.5, color=dcs))   
+    fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2],
+            surfacecolor = B, colorbar_title='B_coil [T]', 
+            colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="Viridis" ))
+    fig.update_layout(scene_aspectmode='data',  scene = dict(
+        xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),
+        yaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
+        zaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),))
+    fig.show()
+    return
+
+
+
+
+
+
 def plot_segment(filename):
     arge = read_hdf5(filename)
     coil = arge['coil_centroid']
@@ -259,7 +322,8 @@ def plot_coil_compare(filename, coilfile):    # 线圈
 
 def plot_strain(filename):
     arge = read_hdf5(filename)
-
+    nic = arge['number_independent_coils']
+    arge['length_normal'] = [0.001 for i in range(nic)]
     if arge['coil_case'] == 'spline':
         arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
         bc, tj = spline.get_bc_init(arge['number_points'], arge['number_control_points'])
@@ -277,7 +341,7 @@ def plot_strain(filename):
     ns = arge['number_points']
     nn = arge['number_normal']
     nb = arge['number_binormal']
-    nic = arge['number_independent_coils']
+    
 
     rr = np.zeros((nic, 5, ns+1, 3))
     rr = rr.at[:,0,:ns,:].set(coil[:nic, 0, 0, :, :])
@@ -295,6 +359,7 @@ def plot_strain(filename):
     zz = rr[:,:,:,2]
     smax, smin = float(np.max(strain)), float(np.min(strain))
     print('max_strain = ', smax, smin)
+    print(np.max(strain, axis=1))
     s = np.zeros((nic, 5, ns+1))
     for i in range(5):
         s = s.at[:, i, :-1].set(strain)
@@ -399,11 +464,11 @@ def plot_strain_compare(filename, coilfile):
     for i in range(nic):
         fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
             surfacecolor = os[i,:,:], cmax = osmax, cmin = osmin, colorbar_title='old_strain', 
-            colorbar = dict(x = 0.2,tickfont = dict(size=20))  ))
+            colorbar = dict(x = 0.2,tickfont = dict(size=30))  ))
     for i in range(nic):
         fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
             surfacecolor = s[i,:,:], cmax = smax, cmin = smin, colorbar_title='strain', 
-            colorbar = dict(x = 0.7,tickfont = dict(size=20)) ,colorscale="Viridis"))
+            colorbar = dict(x = 0.7,tickfont = dict(size=30)) ,colorscale="Viridis"))
 
     fig.update_layout(coloraxis_showscale=True)
     fig.update_layout(scene_aspectmode='data',  scene = dict(
@@ -417,18 +482,84 @@ def plot_strain_compare(filename, coilfile):
     return
 
 
+def plot_force(filename):
+    arge = read_hdf5(filename)
+    nic = arge['number_independent_coils']
+    if arge['coil_case'] == 'spline':
+        arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
+        bc, tj = spline.get_bc_init(arge['number_points'], arge['number_control_points'])
+        arge['bc'] = bc
+        arge['tj'] = tj
+
+    ns = arge['number_segments']
+    arge['number_segments'] = arge['number_points'] 
+    coil_cal = post_coilset.CoilSet(arge)  
+    params = (arge['coil_arg'], arge['coil_fr'], arge['coil_I'])
+    coil = coil_cal.get_coil(params)
+    force = coil_cal.get_plot_force(params)
+    force = np.linalg.norm(force, axis=-1)
+    
+    arge['number_segments'] = ns
+    ns = arge['number_points']
+    nn = arge['number_normal']
+    nb = arge['number_binormal']
+    
+
+    rr = np.zeros((nic, 5, ns+1, 3))
+    rr = rr.at[:,0,:ns,:].set(coil[:nic, 0, 0, :, :])
+    rr = rr.at[:,1,:ns,:].set(coil[:nic, 0, nb-1, :, :])
+    rr = rr.at[:,2,:ns,:].set(coil[:nic, nn-1, nb-1, :, :])
+    rr = rr.at[:,3,:ns,:].set(coil[:nic, nn-1, 0, :, :])
+    rr = rr.at[:,4,:ns,:].set(coil[:nic, 0, 0, :, :])
+    rr = rr.at[:,0,-1,:].set(coil[:nic, 0, 0, 0, :])
+    rr = rr.at[:,1,-1,:].set(coil[:nic, 0, nb-1, 0, :])
+    rr = rr.at[:,2,-1,:].set(coil[:nic, nn-1, nb-1, 0, :])
+    rr = rr.at[:,3,-1,:].set(coil[:nic, nn-1, 0, 0, :])
+    rr = rr.at[:,4,-1,:].set(coil[:nic, 0, 0, 0, :])
+    xx = rr[:,:,:,0]
+    yy = rr[:,:,:,1]
+    zz = rr[:,:,:,2]
+    fmax, fmin = float(np.max(force)), float(np.min(force))
+    print('max_force = ', fmax, fmin)
+    f = np.zeros((nic, 5, ns+1))
+    for i in range(5):
+        f = f.at[:, i, :-1].set(force)
+        f = f.at[:, i, -1].set(force[:, 0])
+        
+    fig = go.Figure()
+    for i in range(nic):
+        fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
+            surfacecolor = f[i,:,:], cmax = fmax, cmin = fmin, colorbar_title='force [N/m]', 
+            colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="plasma"))
+    fig.update_layout(coloraxis_showscale=True)
+    fig.update_layout(scene_aspectmode='data',  scene = dict(
+        xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),
+        yaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
+        zaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),))
+    fig.show() 
+    fig.write_image('results/paper/w7x/force_opt_2.pdf')
+    return 
+
+
+
+
 def plot_surface(filename):
     arge = read_hdf5(filename)
-    # oldcoil_arge = read_hdf5('results/w7x/w7x.h5') 
+    nz = arge['number_zeta']
     nzs = int(arge['number_zeta']/arge['number_field_periods']/(arge['stellarator_symmetry']+1)) +1 
     rs = arge['surface_data_r']
     rs = rs[:nzs]
     r_surf = np.zeros((nzs, arge['number_theta']+1, 3))
+
     r_surf = r_surf.at[:,:-1,:].set(rs)
     r_surf = r_surf.at[:,-1,:].set(rs[:,0,:])
     lossB = arge['loss_B'][:nzs]
     lossB = np.linalg.norm(lossB[:nzs], axis=-1)
     Bs = np.zeros((nzs, arge['number_theta']+1))
+
     Bs = Bs.at[:,:-1].set(lossB)
     Bs = Bs.at[:,-1].set(lossB[:,0])
 
@@ -478,11 +609,11 @@ def plot_surface(filename):
     fig = go.Figure()
     fig.add_trace(go.Surface(x=r_surf[:,:,0], y=r_surf[:,:,1], z=r_surf[:,:,2],
             surfacecolor = Bs, colorbar_title='B_surf [T]', 
-            colorbar = dict(x = 0.8,tickfont = dict(size=20)),colorscale="Viridis" ))
+            colorbar = dict(x = 0.8,tickfont = dict(size=40)),colorscale="Viridis" ))
     for i in range(nic):
         fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
             surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
-            colorbar = dict(x = 0.1,tickfont = dict(size=20)),colorscale="plasma"))
+            colorbar = dict(x = 0.1,tickfont = dict(size=40)),colorscale="plasma"))
     fig.update_layout(coloraxis_showscale=True)
     fig.update_layout(scene_aspectmode='data',  scene = dict(
         xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
@@ -573,16 +704,25 @@ def plot_surface_compare(filename, coilfile):
     oB = oB.at[:, :-1, -1].set(oB_coil[:, :, 0])
     oB = oB.at[:, -1].set(oB[:, 0, :])
 
+    color = np.ones((nic, 5, ns+1))
+    old_color = np.zeros((nic, 5, ns+1))
+    color = color.at[:,:,0].set(0.99)
+    old_color = old_color.at[:,:,0].set(0.01)
     fig = go.Figure()
+    # for i in range(nic):
+    #     fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
+    #         surfacecolor = oB[i,:,:], cmax = oBmax, cmin = oBmin, colorbar_title='old_B_coil [T]', 
+    #         colorbar = dict(x = 0.2,tickfont = dict(size=20))  ))
+    # for i in range(nic):
+    #     fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
+    #         surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
+    #         colorbar = dict(x = 0.7,tickfont = dict(size=20)) ,colorscale="Viridis"))
     for i in range(nic):
         fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
-            surfacecolor = oB[i,:,:], cmax = oBmax, cmin = oBmin, colorbar_title='old_B_coil [T]', 
-            colorbar = dict(x = 0.2,tickfont = dict(size=20))  ))
+            surfacecolor = old_color[i],cmax = 1, cmin = 0,))
     for i in range(nic):
         fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
-            surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
-            colorbar = dict(x = 0.7,tickfont = dict(size=20)) ,colorscale="Viridis"))
-
+            surfacecolor = color[i],cmax = 1, cmin = 0,))
     fig.update_layout(coloraxis_showscale=True)
     fig.update_layout(scene_aspectmode='data',  scene = dict(
         xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
@@ -592,23 +732,26 @@ def plot_surface_compare(filename, coilfile):
         zaxis = dict(# backgroundcolor="white", gridcolor="white",
             title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),))
     fig.show() 
+    fig.write_html('results/paper/w7x/force_opt_compare.html')
     return
 
 
-filename = 'results/LQA/circle_start/fourier/alpha/f9n10_s8_3.h5'
+filename = 'results/paper/QA/opt_1.h5'
 
 # plot_surface_0(filename)
 # plot_coil(filename)
 # plot_coil_0(filename)
 # plot_segment(filename)
-plot_surface(filename)
+# plot_surface(filename)
 # plot_alpha(filename)
+# plot_dcs(filename)
 # plot_strain(filename)
+# plot_force(filename)
 
-coilfile = 'results/LQA/useful/cs_fn_4_b.h5'
+coilfile = 'results/paper/QA/opt_2.h5'
 # plot_coil_compare(filename, coilfile)
 # plot_surface_compare(filename, coilfile)
-# plot_strain_compare(filename, coilfile)
+plot_strain_compare(filename, coilfile)
 
 # lossfile = 'results/ellipse/lossCG3/loss.npy'
 # plot_loss(lossfile)

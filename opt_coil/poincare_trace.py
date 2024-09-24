@@ -12,55 +12,25 @@ PI = np.pi
 
 
 
-def computeB(xyz, dl, r_coil):
-    """
-        Inputs:
-
-        r, zeta, z : The coordinates of the point we want the magnetic field at. Cylindrical coordinates.
-
-        Outputs: 
-
-        B_z, B_zeta, B_z : the magnetic field components at the input coordinates created by the currents in the coils. Cylindrical coordinates.
-    """
-  
-    mu_0I = np.ones((r_coil.shape[0]))
-    mu_0Idl = mu_0I[:,np.newaxis,np.newaxis] * dl # NC x NS x NNR x NBR x 3
-    r_minus_l = xyz[np.newaxis,np.newaxis,:] - r_coil[:,:,:] # NC x NS x NNR x NBR x 3
+def computeB(xyz, dl, r_coil, I):
+    mu_0I = I * 1e-7
+    mu_0Idl = mu_0I[:,np.newaxis,np.newaxis,np.newaxis,np.newaxis] * dl # NC x NNR x NBR x NS x 3
+    r_minus_l = xyz[np.newaxis,np.newaxis,np.newaxis,np.newaxis,:] - r_coil # NC x NS x NNR x NBR x 3
     top = np.cross(mu_0Idl,r_minus_l) # NC x x NS x NNR x NBR x 3
     bottom = np.linalg.norm(r_minus_l,axis=-1)**3 # NC x NS x NNR x NBR
-    B_xyz = np.sum(top / bottom[:,:,np.newaxis], axis=(0,1)) # 3, xyz coordinates
-    
+    B_xyz = np.sum(top / bottom[:,:,:,:,np.newaxis], axis=(0,1,2,3)) # 3, xyz coordinates
     return B_xyz
 
 
 
-def tracing(r_coil, dl, r0, z0, phi0, niter, nfp, nstep, **kwargs):
-    """Trace magnetic field line in toroidal geometry
-
-    Args:
-        bfield (callable): A callable function.
-                          The calling signature is `B = bfield(xyz)`, where `xyz`
-                          is the position in cartesian coordinates and `B` is the
-                          magnetic field at this point (in cartesian coordinates).
-        r0 (list): Initial radial coordinates.
-        z0 (list): Initial vertical coordinates.
-        phi0 (float, optional): The toroidal angle where the poincare plot data saved.
-                                Defaults to 0.0.
-        niter (int, optional): Number of toroidal periods in tracing. Defaults to 100.
-        nfp (int, optional): Number of field periodicity. Defaults to 1.
-        nstep (int, optional): Number of intermediate step for one period. Defaults to 1.
-
-    Returns:
-        array_like: The stored poincare date, shape is (len(r0), niter+1, 2).
-    """
-    
+def tracing(r_coil, dl, I, r0, z0, phi0, niter, nfp, nstep, **kwargs):
     # define the integrand in cylindrical coordinates
     def fieldline(phi, rz):
         rpz = np.array([rz[0], phi, rz[1]])
         cosphi = np.cos(phi)
         sinphi = np.sin(phi)
         xyz = np.array([rpz[0] * cosphi, rpz[0] * sinphi, rpz[2]])
-        Bxyz = lambda xyz : computeB(xyz, dl, r_coil)
+        Bxyz = lambda xyz : computeB(xyz, dl, r_coil, I)
         mag_xyz = np.ravel(Bxyz(xyz))
         mag_rpz = np.array(
             [
