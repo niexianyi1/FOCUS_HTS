@@ -56,8 +56,8 @@ args = {
 
 # LTS/HTS材料(为方便下列参数都以HTS命名)
     'material':                 'REBCO_LT',    # str,    材料类型, REBCO_LT, NbTi, Nb3Sn    
-    'HTS_signle_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 不包括相邻间隙
-    'HTS_signle_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 不包括相邻间隙
+    'HTS_single_width':         4e-3,       # (sw)  float,  HTS材料单根宽度, 不包括相邻间隙
+    'HTS_single_thickness':     5e-5,       # (st)  float,  HTS材料单层结构厚度, 不包括相邻间隙
     
 # loss function 目标和权重
     'target_HTS_strain':            0.004,      #  float,  目标最大应变
@@ -94,7 +94,6 @@ args = {
 # 电流
 
     # 电流初始
-    'current_independent':      0,          #       int,    每个独立线圈是否拥有独立电流, 0:否, 1:是
     'current_I':                [1e5],      #       list,   线圈初始电流数值         
     'total_current_I':          0,          #       int,    电流优化时是否保持总电流不变, 
         # 若为0, 则不设置总电流; 若不为0, 则为总电流数值
@@ -102,12 +101,10 @@ args = {
 # 磁面
     
     # 磁面参数
-    'surface_case':             1,          #       int,    磁面数据来源, 0:直接读取文件, 1:计算vmec文件生成
     'number_theta':             64,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
     'number_zeta':              128,        # (nz)  int,    磁面上\zeta(环向)的网格点数              
-    
     # vmec文件           
-    'surface_vmec_file':                    #       str,    磁面数据的vmec文件
+    'surface_file':                    #       str,    磁面数据的vmec文件
             'initfiles/Landreman-Paul_QA/plasma.boundary',
 
 # 背景磁场
@@ -116,21 +113,10 @@ args = {
     'Bn_extern_file':                        #       str,    读取对应的文件
             'initfiles/ncsx_c09r00/c09r00.boundary',
    
-
-    # 读取磁面文件, 若'surface_case': 1,
-    'surface_r_file':                       #       str,    磁面坐标文件
-            'initfiles/w7x/highres_r_surf.npy',
-    'surface_nn_file':                      #       str,    磁面法向文件
-            'initfiles/w7x/highres_nn_surf.npy',
-    'surface_sg_file':                      #       str,    磁面面积文件
-            'initfiles/w7x/highres_sg_surf.npy',
-
     # LTS/HTS材料
     'HTS_temperature':          4.2,        # (T)   float,  HTS材料温度, 单位K
     'HTS_I_percent':            0.6,        #       float,  线圈电流与超导临界电流的比例,也是临界电流的约束值
     'HTS_structural_percent':   0.01,       #       float,  超导线缆与结构材料的比例
-    'HTS_I_thickness':          1.2e-6,     #       float,  HTS材料导电层厚度
-    'HTS_sec_area':             4.8e-9,     #       float,  HTS材料截面积（厚度*宽度或pi*(w/2)**2）
 
     # 权重设置
     'loss_weight_normalization':     0,          #       int,    是否归一化权重 wi*fi=weight

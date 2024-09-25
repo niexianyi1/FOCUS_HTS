@@ -131,7 +131,7 @@ def read_plasma(args):
         nn = N / sg[:,:,np.newaxis]
         return r, nn, sg
 
-    R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_vmec_file']))
+    R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_file']))
     r, nn, sg = get_plasma_boundary(R, Z, args['number_zeta'], args['number_theta'], Nfp, MT, MZ)
     # args['number_field_periods'] = Nfp
     return args, r, nn, sg 

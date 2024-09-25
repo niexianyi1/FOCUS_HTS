@@ -1,12 +1,8 @@
 import jax.numpy as np
 from jax import jit, vmap, config
-import numpy
 import fourier
 import spline
-import lossfunction
-# import sys
-# sys.path.append('HTS')
-# import self_B
+
 config.update("jax_enable_x64", True)
 pi = np.pi
 
@@ -411,7 +407,6 @@ class CoilSet:
         I_new = np.zeros(self.nic*2)
         I_new = I_new.at[:self.nic].set(I)
         for i in range(self.nic):
-            # I_new = I_new.at[i+self.nic].set(-I[i])
             I_new = I_new.at[i+self.nic].set(-I[i])
         return I_new
 
@@ -458,6 +453,7 @@ class CoilSet:
             I = np.append(I, In)
         else:
             I = np.append(I, 1)
+        print('current = ', I * self.args['I_normalize']) 
         coil_centroid = CoilSet.compute_coil_centroid(self, coil_arg)  
         der1, der2, der3, dt = CoilSet.compute_coil_der(self, coil_arg)   
         tangent, normal, binormal = CoilSet.compute_com(self, der1, coil_centroid)
@@ -477,6 +473,7 @@ class CoilSet:
         dl = CoilSet.symmetry_coil(self, dl)
         I = CoilSet.symmetry_I(self, I) 
         I = I * self.args['I_normalize']
+        
         
         if self.args['coil_case'] == 'spline':  
             coil_arg_c = np.zeros((self.nic, 3, self.args['number_control_points']))

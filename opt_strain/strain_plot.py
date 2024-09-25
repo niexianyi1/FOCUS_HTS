@@ -105,11 +105,11 @@ def plot_strain_compare(filename, coilfile):
     fig = go.Figure()
     for i in range(nic):
         fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
-            surfacecolor = os[i,:,:], cmax = osmax, cmin = osmin, colorbar_title='old_strain', 
+            surfacecolor = os[i,:,:], cmax = osmax, cmin = osmin, colorbar_title='Opt 1_strain', 
             colorbar = dict(x = 0.2,tickfont = dict(size=20))  ))
     for i in range(nic):
         fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
-            surfacecolor = s[i,:,:], cmax = smax, cmin = smin, colorbar_title='strain', 
+            surfacecolor = s[i,:,:], cmax = smax, cmin = smin, colorbar_title='Opt 2_strain', 
             colorbar = dict(x = 0.7,tickfont = dict(size=20)) ,colorscale="Viridis"))
 
     fig.update_layout(coloraxis_showscale=True)

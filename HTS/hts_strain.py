@@ -12,8 +12,8 @@ def cn(args, coil_output_func, params):
 
 
 def HTS_strain(args, curva, v1, v2, dl):
-    width = args['HTS_signle_width']
-    thickness = args['HTS_I_thickness']
+    width = args['HTS_single_width']
+    thickness = args['HTS_single_thickness']
     dl = np.mean(dl[:args['number_independent_coils']], axis=(1,2))
     hard_bend = HTS_strain_hard_bend(width, curva, v1)
     tor = HTS_strain_tor(width, dl, v1)

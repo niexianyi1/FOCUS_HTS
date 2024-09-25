@@ -11,6 +11,7 @@ import strain_plot
 import sys
 sys.path.append('opt_coil')
 import read_init
+import read_file
 from coilset import CoilSet 
 import lossfunction  
 import save
@@ -37,10 +38,12 @@ def main():
     with open('initfiles/init_args.json', 'r') as f:    # 传入地址
         args = json.load(f)
     globals().update(args)
-    
+    arge = read_file.read_hdf5(args['init_coil_file'])
+    args['length_binormal'] = arge['length_binormal']
     # 获取初始数据
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
     nic = args['number_independent_coils']
+
     loss_vals = []
     # 两种迭代函数
 
@@ -128,15 +131,20 @@ def main():
     print('time cost = ', end - start)
     
     del args['coil_arg_i']
-    params = (coil_arg_init, fr_total, I_init[:-1])
+    args['I_normalize'] = arge['coil_I'][nic-1]
+    I = arge['coil_I'][:nic] / args['I_normalize']
+    params = (coil_arg_init, fr_total, I[:-1])
     # 得到优化后的线圈参数, 保存到文件中
     coil_cal = CoilSet(args)
     coil_output_func = coil_cal.cal_coil 
     coil_all = coil_cal.end_coil(params)
     loss_end = lossfunction.loss_save(args, coil_output_func, params, surface_data)
-    save.save_file(args, loss_vals, coil_all, loss_end, surface_data) 
-
     ### 画对比图
     strain_plot.plot_strain_compare(args['out_hdf5'], args['init_coil_file'])
+    ### 保存文件
+    args['length_normal'] = arge['length_normal']
+    save.save_file(args, loss_vals, coil_all, loss_end, surface_data) 
+
+    
     
 

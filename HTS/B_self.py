@@ -161,7 +161,7 @@ def coil_self_B_max(args, coil, I, dl, v1, v2, binormal, curva, der2):
     return B_self
 
 
-def coil_self_B_signle(args, coil, I, dl, v1, v2, binormal, curva, der2): # 方形截面
+def coil_self_B_single(args, coil, I, dl, v1, v2, binormal, curva, der2): # 方形截面
     nic = args['number_independent_coils']
     ns = args['number_segments']    
     I_nic = I[:nic, np.newaxis, np.newaxis]

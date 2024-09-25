@@ -154,18 +154,15 @@ def main():
     # 迭代循环, 得到导数, 带入变量, 得到新变量
     # 分两种情况, 固定迭代次数、给定迭代目标残差
     start = time.time()
-    if args['iter_method'] == 'jax':
-        # 参数迭代算法        
-        opt_init_coil_arg, opt_update_coil_arg, get_params_coil_arg = read_init.args_to_op(
-            args, args['optimizer'], args['step_size'])
-        opt_init_fr, opt_update_fr, get_params_fr = read_init.args_to_op(
-            args, args['optimizer'], args['step_size'])
-        opt_init_I, opt_update_I, get_params_I = read_init.args_to_op(
-            args, args['optimizer'], args['step_size'])   
+    if args['iter_method'] == 'jax':     
+        opt = read_init.jax_op(args)   
+        opt_init_coil_arg, opt_update_coil_arg, get_params_coil_arg = opt[0]
+        opt_init_fr, opt_update_fr, get_params_fr = opt[1]
+        opt_init_I, opt_update_I, get_params_I = opt[2]
         opt_state_coil_arg = opt_init_coil_arg(coil_arg_init)
         opt_state_fr = opt_init_fr(fr_init)  
         opt_state_I = opt_init_I(I_init[:-1])  
-        
+
         for i in range(args['number_iteration']):
             opt_state_coil_arg, opt_state_fr, opt_state_I, loss_val = objective_function_jax(
                 args, opt_state_coil_arg, opt_state_fr, opt_state_I)

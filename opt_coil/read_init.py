@@ -41,7 +41,7 @@ def init(args):
     return args, coil_arg_init, fr_init, surface_data, I_init
 
 
-def args_to_op(args, optimizer, step_size):
+def jax_op(args):
     """
     根据给定的jax的梯度下降迭代方式, 获取迭代变量
 
@@ -52,15 +52,29 @@ def args_to_op(args, optimizer, step_size):
     Returns:
         An (init_fun, update_fun, get_params) triple.
     """
+    if args['coil_optimize'] == 0:
+        step_size_coil = 0
+    else:
+        step_size_coil = args['step_size']  
 
-    if optimizer == 'gd':
-        return  op.sgd(step_size)
-    if optimizer == 'sgd':
-        return  op.sgd(step_size)
-    if optimizer == 'momentum':
-        return  op.momentum(step_size, args['momentum_mass'])
-    if optimizer == 'adam':
-        return  op.adam(step_size, args['momentum_mass'], args['var'], args['eps'])
+    if args['alpha_optimize'] == 0:
+        step_size_alpha = 0
+    else:
+        step_size_alpha = args['step_size']  
+
+    if args['I_optimize'] == 0:
+        step_size_I = 0
+    else:
+        step_size_I = args['step_size']  
+
+    if args['optimizer'] == 'sgd':
+        return  (op.sgd(step_size_coil), op.sgd(step_size_alpha), op.sgd(step_size_I))
+    if args['optimizer'] == 'momentum':
+        return  (op.momentum(step_size_coil, 0.9),
+                 op.momentum(step_size_alpha, 0.9),
+                 op.momentum(step_size_I, 0.9))
+    if args['optimizer'] == 'adam':
+        return  (op.adam(step_size_coil), op.adam(step_size_alpha), op.adam(step_size_I))
 
 
 def nlopt_op(args, params):
@@ -75,22 +89,8 @@ def nlopt_op(args, params):
 def get_surface_data(args):           # surface data的获取
     """
     获取磁面参数
-    Args:
-        args : dict,    参数总集
-
-    Returns:
-        surface_data : 磁面参数的合集
-            r :   array,  [nz, nt, 3], 磁面坐标
-            nn :  array,  [nz, nt, 3], 磁面法向
-            sg :  array,  [nz, nt, 3], 磁面面积
     """
-    if args['surface_case'] == 0 :
-        r = np.load(args['surface_r_file'])
-        nn = np.load(args['surface_nn_file'])
-        sg = np.load(args['surface_sg_file'])
-    elif args['surface_case'] == 1 :
-        args, r, nn, sg = read_file.read_plasma(args)
-        
+    args, r, nn, sg = read_file.read_plasma(args)
     surface_data = (r, nn, sg)
     return args, surface_data
 
@@ -110,16 +110,13 @@ def init_I(args):
         I = args['makegrid_I']  
         
     else:
-        current_I = args['current_I']
+        current_I = np.array(args['current_I'])
+        assert len(current_I) == 1 or len(current_I) == nic
         I = np.zeros(nic)
-        if args['current_independent'] == 0:
-            I = I.at[:].set(current_I[0])
-        elif args['current_independent'] == 1:
-            for i in range(nic):
-                I = I.at[i].set(current_I[i])
-        
-        if args['total_current_I'] != 0:
-            assert args['total_current_I'] == np.sum(I)
+        I = I.at[:].set(current_I)
+
+    if args['total_current_I'] != 0:
+        assert args['total_current_I'] == np.sum(I)
         
     args['I_normalize'] = I[-1]
     I_init = I / I[-1]
@@ -325,30 +322,14 @@ def get_Bn_extern(args):
 
 
 def test(args, coil_arg_init):
-    ## 应用梯度下降优化时, 优化项的步长不能为0
-    if args['iter_method'] == 'jax':
-        if args['coil_optimize'] == 0:
-            args['step_size_coil'] = 0
-        else:
-            assert args['step_size_coil'] != 0  
 
-        if args['alpha_optimize'] == 0:
-            args['step_size_alpha'] = 0
-        else:
-            assert args['step_size_alpha'] != 0
-
-        if args['I_optimize'] == 0:
-            args['step_size_I'] = 0
-        else:
-            assert args['step_size_I'] != 0  
-    
     ## fourier系数和spline系数
     if args['coil_case'] == 'fourier':
         assert args['number_fourier_coils'] == coil_arg_init.shape[2]
     else :
         assert args['number_control_points'] == coil_arg_init.shape[2] + 3
     
-    
+
     assert args['number_independent_coils'] == coil_arg_init.shape[0]
 
     ## 线圈最小间距应大于截面的长度

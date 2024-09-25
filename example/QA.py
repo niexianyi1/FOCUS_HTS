@@ -16,46 +16,47 @@ args = {
 # 优化
     # 优化目标
     'coil_optimize':            1,          #       int,    是否优化线圈位置, 0为否, 1为是
-    'alpha_optimize':           0,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
-    'I_optimize':               0,          #       int,    是否优化电流, 0为否, 1为是
+    'alpha_optimize':           1,          #       int,    是否优化有限截面旋转角, 0为否, 1为是
+    'I_optimize':               1,          #       int,    是否优化电流, 0为否, 1为是
 
     #迭代方式
-    'iter_method':              'jax',      #       str,    优化方式, 'jax', 'min', 'nlopt',
+    'iter_method':              'nlopt',     #       str,    优化方式, 'jax', 'min', 'nlopt', #'for-min', 'min-for'
     
     # 优化算法参数:minimize
-    'minimize_method':          'CG',       #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+    'minimize_method':          'CG',     #       str,    minimize方法, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
     'minimize_tol':             1e-2,       # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
 
     # 优化算法参数:nlopt
-    'nlopt_algorithm':          'LD_MMA',   #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
-    'stop_criteria':             1e-4,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
-    'inequality_constraint_strain': 0,      #       int,    是否开启不等式约束
+    'nlopt_algorithm':          'LD_MMA',     #       str,    nlopt算法, https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
+    'stop_criteria':             1e-6,      # (mint)float,  （minimize）目标残差, 若为0, 不考虑此项                                   
+    'inequality_constraint_strain':  1,
 
     # 优化算法参数:jax, 通过设置迭代步长是否为0可以控制优化
-    'number_iteration':         0,          # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
-    'optimizer':                'momentum', # (opt) str,    线圈参数迭代方法,(only set:sgd, momentum and adam), (https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html#jax.example_libraries.optimizers.constant)
-    'step_size':                1e-5,       #       float,  参数coil_arg, 迭代步长, 为0则不优化                      
-    
+    'number_iteration':         0,        # (ni)  int,    优化器迭代次数（for循环）, 若为0, 则不迭代
+    'optimizer':           'momentum', # (opt) str,    线圈参数迭代方法,  (sgd, momentum, or adam)  
+    'step_size':           1e-5,       #       float,  参数coil_arg, 迭代步长, 为0则不优化                      
+                   
+
 # 线圈
 
     # 线圈参数
     'number_coils':             16,         # (nc)  int,    线圈总数                    
     'number_field_periods':     2,          # (nfp) int,    线圈周期数                     
-    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                                      
+    'stellarator_symmetry':     1,          # (ss)  int,    仿星器对称，1:对称，0:非对称                     
     'number_segments':          80,         # (ns)  int,    每个线圈分段数   
     
     # 线圈输入方式      
     'coil_case':                'fourier',  #       str,    线圈表示方法, 'spline' or 'fourier' or 'spline_local'
     'init_coil_option':         'circle',     #       str,    初始线圈参数的来源, 'spline' or 'coordinates' or 'fourier' or 'circle'
-    'circle_coil_radius':       1.3,        #       float,  'circle' 的初始半径   
-    'init_coil_file':                       #       str,    初始线圈文件名, 后缀为'npy', 'h5', 其他视为'makegrid'
-            'initfiles/w7x/w7x_coil_5.npy',       
-
+    'circle_coil_radius':       0.7,        #       float,  'circle' 的初始半径   
+    'init_coil_file':                       #       str,    初始线圈文件名
+            'results/paper/QA/opt_1.h5',       
+    
     # Fourier表示
     'number_fourier_coils':        6,          # (nfc) int,    表示线圈的fourier分量数
                      
     # Bspline表示
-    'number_control_points':    32,         # (ncp) int,    每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合                   
+    'number_control_points':    18,         # (ncp) int,    每个线圈控制点数,为输入线圈坐标点数+2，默认有一个坐标点闭合                   
 
     # Bspline局部优化
     'optimize_location_nic':    [0],      #       list,   局部优化的线圈位置, 由列表给出进行局部优化的线圈是第几个, 第一个线圈从0开始   
@@ -67,30 +68,30 @@ args = {
 
     # 有限截面参数
     'length_calculate':         0,          #       int,    0：手动给出截面大小, 1：由超导线圈临界电流给出截面大小
-    'length_normal':            [0.16 for i in range(5)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
-    'length_binormal':          [0.16 for i in range(5)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
-    'number_normal':            1,          # (nn)  int,    有限截面下的法向线圈数量                     
-    'number_binormal':          1,          # (nb)  int,    有限截面下的副法向线圈数量                    
+    'length_normal':            [0.05 for i in range(4)],       # (ln)  list,  有限截面下每个线圈的法向间隔的长度                   
+    'length_binormal':          [0.05 for i in range(4)],       # (lb)  list,  有限截面下每个线圈的副法向间隔的长度                    
+    'number_normal':            2,          # (nn)  int,    有限截面下的法向线圈数量                     
+    'number_binormal':          2,          # (nb)  int,    有限截面下的副法向线圈数量                    
                      
     # 旋转角参数
     'init_fr_case':             0,          #       int,    初始fr给出方法, 0：自动生成各项为0, 1：读取文件
     'init_fr_file':                         #       str,    给出变量fr的初始值文件
             'results_f/circle/s1_fr.npy',               
-
+   
 # 电流
 
     # 电流初始
-    'current_I':                [1.62e6],      #       list,   线圈初始电流数值,列表长度为1或独立线圈数   
-    'total_current_I':          0,          #       int,    电流优化时是否保持总电流不变, 
-        # 若为0, 则不设置总电流; 若不为0, 则为总电流数值(推荐)
+    'current_I':                [1e5,1e5,1e5,1e5],      #       list,   线圈初始电流数值          
+    'total_current_I':          4e5,          #       int,    电流优化时是否保持总电流不变, 
+        # 若为0, 则不设置总电流; 若不为0, 则为总电流数值
 
 # 磁面
     
     # 磁面参数
-    'number_theta':             40,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
-    'number_zeta':              128,        # (nz)  int,    磁面上\zeta(环向)的网格点数                       
+    'number_theta':             32,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
+    'number_zeta':              80,        # (nz)  int,    磁面上\zeta(环向)的网格点数                       
     'surface_file':                    #       str,    磁面数据的vmec文件
-            'initfiles/w7x/plasma.boundary',
+            'initfiles/QA/plasma_no_well.boundary',
 
 # 背景磁场
 
@@ -107,50 +108,50 @@ args = {
     'HTS_I_percent':            0.6,        #       float,  线圈电流与超导临界电流的比例,也是临界电流的约束值
     'HTS_structural_percent':   0.03,       #       float,  超导线缆与结构材料的比例
     
-    
-    
+
+
 # loss function 目标和权重
-    
+
     'loss_weight_normalization':     0,
     # 权重
     'weight_bnormal':           1,          # (wb)  float,  法向磁场分量, 一般设为1
-    'weight_length':            0.001,          # (wl)  float,  单根线圈平均长度 
-    'weight_curvature':         0,          # (wc)  float,  曲率 
-    'weight_curvature_max':     0,          # (wcm) float,  最大曲率
-    'weight_torsion':           0,          # (wt)  float,  扭转 
-    'weight_torsion_max':       0,          # (wtm) float,  最大扭转
-    'weight_distance_coil_coil':    0,      # (wdcc)float,  线圈间距 
-    'weight_distance_coil_surface': 0,      # (wdcs)float,  线圈与磁面距离 
-    'weight_HTS_strain':            0,          #       float,  应变量
-    'weight_HTS_force_max':             0,          # (wf)  float,  线圈受自场力  
-    'weight_HTS_force_mean':             0,          # (wf)  float,  线圈受自场力  
+    'weight_length':            4e-3,          # (wl)  float,  单根线圈平均长度 
+    'weight_curvature':         1e-4,          # (wc)  float,  曲率 
+    'weight_curvature_max':     1e-4,          # (wcm) float,  最大曲率
+    'weight_torsion':           2e-4,          # (wt)  float,  扭转 
+    'weight_torsion_max':       1e-5,          # (wtm) float,  最大扭转
+    'weight_distance_coil_coil':    4e-3,      # (wdcc)float,  线圈间距 
+    'weight_distance_coil_surface': 4e-4,      # (wdcs)float,  线圈与磁面距离 
+    'weight_HTS_strain':            1e-5,          #       float,  应变量,一般设为0,若想优化应变可通过不等式约束
+    'weight_HTS_force_max':         1e-9,          # (wf)  float,  线圈受自场力  
+    'weight_HTS_force_mean':        1e-9,          # (wf)  float,  线圈受自场力  
     'weight_HTS_Icrit':             0,          #       float,  线圈自场与线圈表面夹角   
-
 
     # 目标
     'target_length_mean':            0,          #       float,  目标长度, 若为0则约束其较小
     'target_length_single':                     #  list/float,   每个线圈目标长度,若第一项为0则不约束
-                            [0,1.5,1.5,1.5],
-    'target_curvature_max':     2.36,          #       float,  目标最大曲率
-    'target_torsion_max':       5,          #       float,  目标最大扭转
-    'target_distance_coil_coil':    0.25,      #       float,  目标最大线圈间距
-    'target_distance_coil_surface': 0.44,      #       float,  目标最大线圈与磁面距离
-    'target_HTS_strain':            0.0039,          #       float,  目标最大应变
+                            [0, 5, 5, 4.8],
+    'target_curvature_max':     3.4,          #       float,  目标最大曲率
+    'target_torsion_max':       12,          #       float,  目标最大扭转
+    'target_distance_coil_coil':    0.1,      #       float,  目标最大线圈间距
+    'target_distance_coil_surface': 0.3,      #       float,  目标最大线圈与磁面距离
+    'target_HTS_strain':            0.0065,          #       float,  目标最大应变
     'target_HTS_force_max':             0,            #       float, 目标最大受力
 
 # 结果保存
 
     # 输出选项,  0：不保存, 1：保存, 
-    'save_hdf5' :               0,          #       int,    保存hdf5文件, 包含所有参数(大部分)
+    'save_hdf5' :               1,          #       int,    保存hdf5文件, 包含所有参数(大部分)
 
     # 输出地址
     'out_hdf5':                             #       str,    hdf5, 输出参数
-        'results/test/lossno_test/f2n4_1.h5',   
+        'results/QA/circle_start/current/f10n6_nowell_4.h5',   
+
 
 # 简单画图(更多功能可在后处理post/post_plot.py中进行)
 
     # 画图选项
-    'plot_coil':                11,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
+    'plot_coil':                21,          #       int,    是否画线圈, 0:不画, 1:画线圈点集, 2:画有限截面
     'plot_loss':                0,          #       int,    是否画迭代曲线, 0：不画, 1：画
     'plot_poincare':            0,          #       int,    是否画poincare图, 0：不画, 1：画
 
@@ -159,7 +160,6 @@ args = {
 
     # 画poincare图
     'poincare_number':          25,         # (pn)      int,    画poincare图时的磁面圈数                         
-
 
 # ------------ 不常变参数 ------------ #
     # 旋转角参数
