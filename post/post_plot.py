@@ -736,7 +736,7 @@ def plot_surface_compare(filename, coilfile):
     return
 
 
-filename = 'results/paper/QA/opt_1.h5'
+filename = 'results/paper/w7x/force_opt.h5'
 
 # plot_surface_0(filename)
 # plot_coil(filename)
@@ -753,23 +753,176 @@ coilfile = 'results/paper/QA/opt_2.h5'
 # plot_surface_compare(filename, coilfile)
 plot_strain_compare(filename, coilfile)
 
-# lossfile = 'results/ellipse/lossCG3/loss.npy'
-# plot_loss(lossfile)
+def plot(args, coil_all, loss_end, lossvals, params, surface_data):
+    """ Draw as set in input. """
 
-# filename = 'initfiles/hsx/coils.hsx'
-# coil = read_file.read_makegrid(filename, 48, 384)
-# coil = np.reshape(coil, (385*48, 3))
+    if args['plot_coil'] != 0 :
+        plot_coil(args, params, surface_data, loss_end)
+    if args['plot_loss'] != 0 :
+        plot_loss(lossvals)
+    if args['plot_poincare'] != 0 :
+        plot_poincare(args, coil_all, surface_data)
 
-# fig = go.Figure()
-# fig.add_scatter3d(x=coil[:, 0],y=coil[:, 1],z=coil[:, 2], name='newcoil', mode='markers', marker_size = 1.5)   
-# fig.update_layout(scene_aspectmode='data',  scene = dict(
-#     xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
-#         title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),
-#     yaxis = dict(# backgroundcolor="white", gridcolor="white",
-#         title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
-#     zaxis = dict(# backgroundcolor="white", gridcolor="white",
-#         title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),))
-# fig.show()
+    return
+
+
+def plot_loss(lossfile):
+
+    lossvals = np.load('{}'.format(lossfile))
+    fig = go.Figure()
+    fig.add_scatter(x = np.arange(0, len(lossvals), 1), y = lossvals, 
+                        name = 'lossvalue', line = dict(width=5))
+    fig.update_xaxes(title_text = "opt_coil",title_font = {"size": 25},title_standoff = 12, 
+                        tickfont = dict(size=25))
+    fig.update_yaxes(title_text = "lossvalue",title_font = {"size": 25},title_standoff = 12, 
+                        tickfont = dict(size=25) ,type="log", exponentformat = 'e')
+    fig.show()
+    return
+
+
+
+def plot(p):
+    arge = read_hdf5(p['filename'])   
+    if arge['coil_case'] != 'fourier':
+        arge['coil_arg'] = arge['coil_arg'][:, :, :-3]
+        bc, tj = spline.get_bc_init(arge['number_points'], arge['number_control_points'])
+        arge['bc'] = bc
+        arge['tj'] = tj
+
+    ns = arge['number_segments']
+    arge['number_segments'] = p['number_points'] 
+    coil_cal = post_coilset.CoilSet(arge)  
+    params = (arge['coil_arg'], arge['coil_fr'], arge['coil_I'])
+    coil = coil_cal.get_coil(params)
+    _, B_coil = coil_cal.get_plot_args(params)
+
+    nic = arge['number_independent_coils'] 
+    ns = arge['number_points']
+    nn = arge['number_normal']
+    nb = arge['number_binormal']
+
+    B_coil = np.linalg.norm(B_coil, axis=-1)
+    Bmax, Bmin = float(np.max(B_coil)), float(np.min(B_coil))
+    print('maxB = ', Bmax, Bmin)
+
+    if p['filament or finite_build'] == 1:
+        xx, yy, zz, arg = finite_build(coil, nic, ns, nn, nb, B_coil)
+
+    if p['compare'] == 1:
+        oldcoil_arge = read_hdf5(p['compare_file']) 
+        if oldcoil_arge['coil_case'] != 'fourier':
+            oldcoil_arge['coil_arg'] = oldcoil_arge['coil_arg'][:, :, :-3]
+            bc, tj = spline.get_bc_init(arge['number_points'], oldcoil_arge['number_control_points'])
+            oldcoil_arge['bc'] = bc
+            oldcoil_arge['tj'] = tj
+
+        oldcoil_arge['number_segments'] = p['number_points'] 
+        old_coil_cal = post_coilset.CoilSet(oldcoil_arge)  
+        oldparams = (oldcoil_arge['coil_arg'], oldcoil_arge['coil_fr'], oldcoil_arge['coil_I'])
+        oldcoil = old_coil_cal.get_coil(oldparams)
+        _, old_B_coil = old_coil_cal.get_plot_args(oldparams)
+        orr = np.zeros((nic, 5, ns+1, 3))
+
+        onn = arge['number_normal']
+        onb = arge['number_binormal']
+
+        orr = orr.at[:,0,:ns,:].set(oldcoil[:nic, 0, 0, :, :])
+        orr = orr.at[:,1,:ns,:].set(oldcoil[:nic, 0, onb-1, :, :])
+        orr = orr.at[:,2,:ns,:].set(oldcoil[:nic, onn-1, onb-1, :, :])
+        orr = orr.at[:,3,:ns,:].set(oldcoil[:nic, onn-1, 0, :, :])
+        orr = orr.at[:,4,:ns,:].set(oldcoil[:nic, 0, 0, :, :])
+        orr = orr.at[:,0,-1,:].set(oldcoil[:nic, 0, 0, 0, :])
+        orr = orr.at[:,1,-1,:].set(oldcoil[:nic, 0, onb-1, 0, :])
+        orr = orr.at[:,2,-1,:].set(oldcoil[:nic, onn-1, onb-1, 0, :])
+        orr = orr.at[:,3,-1,:].set(oldcoil[:nic, onn-1, 0, 0, :])
+        orr = orr.at[:,4,-1,:].set(oldcoil[:nic, 0, 0, 0, :])
+        oxx = orr[:,:,:,0]
+        oyy = orr[:,:,:,1]
+        ozz = orr[:,:,:,2]
+        oB_coil = np.linalg.norm(old_B_coil, axis=-1)
+        oBmax, oBmin = float(np.max(oB_coil)), float(np.min(oB_coil))
+        print('maxB = ', oBmax, oBmin)
+        oB = np.zeros((nic, 5, ns+1))
+        oB = oB.at[:, :-1, :-1].set(oB_coil)
+        oB = oB.at[:, :-1, -1].set(oB_coil[:, :, 0])
+        oB = oB.at[:, -1].set(oB[:, 0, :])
+
+
+    fig = go.Figure()
+    for i in range(nic):
+        fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
+            surfacecolor = oB[i,:,:], cmax = oBmax, cmin = oBmin, colorbar_title='old_B_coil [T]', 
+            colorbar = dict(x = 0.2,tickfont = dict(size=20))  ))
+    for i in range(nic):
+        fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
+            surfacecolor = B[i,:,:], cmax = Bmax, cmin = Bmin, colorbar_title='B_coil [T]', 
+            colorbar = dict(x = 0.7,tickfont = dict(size=20)) ,colorscale="Viridis"))
+    # for i in range(nic):
+    #     fig.add_trace(go.Surface(x=oxx[i,:,:], y=oyy[i,:,:], z=ozz[i,:,:], 
+    #         surfacecolor = old_color[i],cmax = 1, cmin = 0,))
+    # for i in range(nic):
+    #     fig.add_trace(go.Surface(x=xx[i,:,:], y=yy[i,:,:], z=zz[i,:,:], 
+    #         surfacecolor = color[i],cmax = 1, cmin = 0,))
+    fig.update_layout(coloraxis_showscale=True)
+    fig.update_layout(scene_aspectmode='data',  scene = dict(
+        xaxis = dict(#  backgroundcolor="white",  gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),
+        yaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white"),
+        zaxis = dict(# backgroundcolor="white", gridcolor="white",
+            title_text = "",showticklabels=False,showbackground=False,zerolinecolor="white",),))
+    fig.show() 
+
+    pass
+
+
+def finite_build(coil, nic, ns, nn, nb, argument):
+    rr = np.zeros((nic, 5, ns+1, 3))
+    rr = rr.at[:,0,:ns,:].set(coil[:nic, 0, 0, :, :])
+    rr = rr.at[:,1,:ns,:].set(coil[:nic, 0, nb-1, :, :])
+    rr = rr.at[:,2,:ns,:].set(coil[:nic, nn-1, nb-1, :, :])
+    rr = rr.at[:,3,:ns,:].set(coil[:nic, nn-1, 0, :, :])
+    rr = rr.at[:,4,:ns,:].set(coil[:nic, 0, 0, :, :])
+    rr = rr.at[:,0,-1,:].set(coil[:nic, 0, 0, 0, :])
+    rr = rr.at[:,1,-1,:].set(coil[:nic, 0, nb-1, 0, :])
+    rr = rr.at[:,2,-1,:].set(coil[:nic, nn-1, nb-1, 0, :])
+    rr = rr.at[:,3,-1,:].set(coil[:nic, nn-1, 0, 0, :])
+    rr = rr.at[:,4,-1,:].set(coil[:nic, 0, 0, 0, :])
+    xx = rr[:,:,:,0]
+    yy = rr[:,:,:,1]
+    zz = rr[:,:,:,2]
+
+    arg = np.zeros((nic, 5, ns+1))
+    arg = arg.at[:, :-1, :-1].set(argument)
+    arg = arg.at[:, :-1, -1].set(argument[:, :, 0])
+    arg = arg.at[:, -1].set(arg[:, 0, :])
+    return xx, yy, zz, arg
+
+
+
+
+p = {
+'plot_coil':                1, 
+'plot_loss':                0,          
+'plot_poincare':            0,  
+
+'filename'      :   'results/paper/QA/opt_1.h5',    # only 'h5'
+
+'compare'       :   0,          # 0:no, 1:yes
+'compare_file'  :   'results/paper/QA/opt_2.h5',
+### coil:
+'filament or finite_build': 1,  # 0:filament, 1:finite_build
+'coil_color'      :   'B',      # the coils color: 'default', 'B', 'strain', 'force/length', 'contrast'
+'number_points'  :   500,
+### poincare:
+'poincare_number':          25,         #       int,                                        
+'poincare_phi0':            0,          # (phi0)float, 
+'number_iter':              400,        #       int,  
+'number_step':              1,          #       int,  
+}
+
+plot(p)
+
 
 
 
