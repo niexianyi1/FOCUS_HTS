@@ -82,20 +82,7 @@ def REBCO_LT(temperature, Bmax, strain):
     Originally authored by S B L Chislett-McDonald @ Durham University
     """
     from parameters import REBCO_LT_parameters as p
-
-    # e_I = strain - p["em"]
-    # strain_func = 1 + p["c1"] * e_I + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
-    # T_e = p["Tc0"] * strain_func ** (1 / p["w"])
-    # t = temperature / T_e
-    # A_e = p["A_0"] * strain_func ** (p["u"] / p["w"])
-    # B_crit = p["Bc20max"] * (1 - t) ** p["s"] * strain_func
-    # b = Bmax / B_crit
-    # T_crit = T_e
-    # x = A_e * pow((T_e * (1 - t ** 2)), 2)
-    # y = pow(B_crit, (p["n"] - 3))
-    # z = pow(b, (p["p"] - 1)) * pow(1 - b, p["q"])
-    # J_crit = x * y * z
-    e_I = strain #- p["em"]
+    e_I = strain - p["em"]
     strain_func = 1 + p["c1"] * e_I + p["c2"] * e_I ** 2 + p["c3"] * e_I ** 3 + p["c4"] * e_I ** 4
     T_e = p["Tc0"] * strain_func
     t = temperature / T_e

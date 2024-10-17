@@ -1,4 +1,4 @@
-
+## Each coil is individually optimized for strain,
 
 import jax.numpy as np
 from jax import value_and_grad, jit, config
@@ -39,13 +39,12 @@ def main():
         args = json.load(f)
     globals().update(args)
     arge = read_file.read_hdf5(args['init_coil_file'])
-    args['length_binormal'] = arge['length_binormal']
-    # 获取初始数据
+
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
     nic = args['number_independent_coils']
 
     loss_vals = []
-    # 两种迭代函数
+
 
     @jit
     def objective_function_minimize(args, fr):
@@ -63,7 +62,7 @@ def main():
         return loss_val, g
 
     @jit
-    def objective_function_nlopt(fr, grad):#=None
+    def objective_function_nlopt(fr, grad):
         global n
         n = n + 1 
         fr = np.reshape(fr, ((1, 2, args['number_fourier_rotate'])))    
@@ -95,8 +94,6 @@ def main():
         return value
 
 
-    # 迭代循环, 得到导数, 带入变量, 得到新变量
-    # 分两种情况, 固定迭代次数、给定迭代目标残差
     fr_total = np.zeros((nic, 2, args['number_fourier_rotate']))
     start = time.time()
     
@@ -134,16 +131,16 @@ def main():
     args['I_normalize'] = arge['coil_I'][nic-1]
     I = arge['coil_I'][:nic] / args['I_normalize']
     params = (coil_arg_init, fr_total, I[:-1])
-    # 得到优化后的线圈参数, 保存到文件中
+    # The optimized coil parameters are saved to a file
     coil_cal = CoilSet(args)
     coil_output_func = coil_cal.cal_coil 
     coil_all = coil_cal.end_coil(params)
     loss_end = lossfunction.loss_save(args, coil_output_func, params, surface_data)
-    ### 画对比图
+    save.save_file(args, loss_vals, coil_all, loss_end, surface_data)     
+    ### drawing
+    args['length_normal'] = 0.001
     strain_plot.plot_strain_compare(args['out_hdf5'], args['init_coil_file'])
-    ### 保存文件
-    args['length_normal'] = arge['length_normal']
-    save.save_file(args, loss_vals, coil_all, loss_end, surface_data) 
+
 
     
     

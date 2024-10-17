@@ -1,3 +1,4 @@
+## plot after 'opt_strain/strain_opt.py'
 
 import plotly.graph_objects as go
 import jax.numpy as np

@@ -1,3 +1,5 @@
+## Read information from various files.
+## 'hdf5', 'makegrid', 'plasma.boundary'
 
 import jax.numpy as np
 import h5py
@@ -20,16 +22,6 @@ def read_hdf5(filename):
 
 
 def read_makegrid(filename, nc, nic):    
-    """
-    读取初始线圈的makegrid文件
-    Args:
-        filename : str, 文件地址
-        nic : int, 独立线圈数, 
-        ns : int, 线圈段数
-    Returns:
-        r : array, [nic, ns+1, 3], 线圈初始坐标
-
-    """
     I = np.zeros((nic))
     with open(filename) as f:
         lines = f.readlines()
@@ -92,7 +84,7 @@ def read_plasma(args):
         y = r * np.sin(zeta)[:, np.newaxis]
         return np.concatenate((x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis = -1)
 
-    def compute_drdz(R, Z, zeta, theta, Nfp, MT, MZ):
+    def calculate_drdz(R, Z, zeta, theta, Nfp, MT, MZ):
         x = np.zeros((zeta.shape[0], theta.shape[0]))
         y = np.zeros((zeta.shape[0], theta.shape[0]))
         z = np.zeros((zeta.shape[0], theta.shape[0]))
@@ -106,7 +98,7 @@ def read_plasma(args):
                 z += z_coeff * np.cos(arg) * -(mz * Nfp)
         return np.concatenate((x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis = -1)
 
-    def compute_drdt(R, Z, zeta, theta, Nfp, MT, MZ):
+    def calculate_drdt(R, Z, zeta, theta, Nfp, MT, MZ):
         x = np.zeros((zeta.shape[0], theta.shape[0]))
         y = np.zeros((zeta.shape[0], theta.shape[0]))
         z = np.zeros((zeta.shape[0], theta.shape[0]))
@@ -124,8 +116,8 @@ def read_plasma(args):
         zeta = np.linspace(0,2 * np.pi, NZ + 1)[:-1]
         theta = np.linspace(0, 2 * np.pi, NT + 1)[:-1]
         r = get_xyz(R, Z, zeta, theta, Nfp, MT, MZ)
-        drdz = compute_drdz(R, Z, zeta, theta, Nfp, MT, MZ)
-        drdt = compute_drdt(R, Z, zeta, theta, Nfp, MT, MZ)
+        drdz = calculate_drdz(R, Z, zeta, theta, Nfp, MT, MZ)
+        drdt = calculate_drdt(R, Z, zeta, theta, Nfp, MT, MZ)
         N = np.cross(drdz, drdt)
         sg = np.linalg.norm(N, axis=-1)
         nn = N / sg[:,:,np.newaxis]
@@ -133,13 +125,12 @@ def read_plasma(args):
 
     R, Z, Nfp, MT, MZ = read_plasma_boundary("{}".format(args['surface_file']))
     r, nn, sg = get_plasma_boundary(R, Z, args['number_zeta'], args['number_theta'], Nfp, MT, MZ)
-    # args['number_field_periods'] = Nfp
     return args, r, nn, sg 
 
 
 
 def read_finite_beta_Bn(args):
-    filename = args['Bn_extern_file']
+    filename = args['Bn_background_file']
     with open(filename) as f:
         _ = f.readline()
         bmn, Nfp, nbf = f.readline().split()
@@ -166,48 +157,3 @@ def read_finite_beta_Bn(args):
 
 
 
-
-
-# def read_axis(filename):
-#     """
-# 	Reads the magnetic axis from a file.
-
-# 	Expects the filename to be in a specified form, which is the same as the default
-# 	axis file given. 
-
-# 	Parameters: 
-# 		filename (string): A path to the file which has the axis data
-# 		N_zeta_axis (int): The toroidal (zeta) resolution of the magnetic axis in real space
-# 		epsilon: The ellipticity of the axis
-# 		minor_rad: The minor radius of the axis, a
-# 		N_rotate: Number of rotations of the axis
-# 		zeta_off: The offset of the rotation of the surface in the ellipse relative to the zero starting point. 
-
-# 	Returns: 
-# 		axis (Axis): An axis object for the specified parameters.
-# 	"""
-#     with open(filename, "r") as file:
-#         file.readline()
-#         _, _ = map(int, file.readline().split(" "))
-#         file.readline()
-#         xc = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         xs = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         yc = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         ys = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         zc = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         zs = np.asarray([float(c) for c in file.readline().split(" ")])
-#         file.readline()
-#         file.readline()
-#         file.readline()
-#         file.readline()
-#         file.readline()
-#         file.readline()
-#         file.readline()
-#         epsilon, minor_rad, N_rotate, zeta_off = map(float, file.readline().split(" "))
-
-#     return xc, xs, yc, ys, zc, zs, epsilon, minor_rad, N_rotate, zeta_off

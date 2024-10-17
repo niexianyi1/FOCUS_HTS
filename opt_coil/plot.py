@@ -1,13 +1,11 @@
 
-### 画图程序，在main.py中调用
-### 使用plotly进行画图
-### 由plot函数控制画图
+### Drawing after optimization,
+### (More functions can be performed in post-processing: post/post_plot.py)
 
 import jax.numpy as np
 import plotly.graph_objects as go
 import coilset
 import spline
-import poincare_trace 
 import coilpy
 import sys
 sys.path.append('HTS')
@@ -16,21 +14,7 @@ import B_self
 
 
 def plot(args, coil_all, loss_end, lossvals, params, surface_data):
-    """
-    按照init_args中设置进行画图
-
-    Args:
-        args : dict, 参数总集
-        coil : array,[nc,ns,nn,nb,3], 优化后线圈坐标
-        lossvals : list,[ni], 迭代数据
-        params : list,[fc,fr,I], 优化后参数
-        I : array,[nc], 每个线圈电流数据
-
-    Returns:
-        plot_coil : 线圈坐标图
-        plot_loss : 迭代曲线图
-        plot_poincare : 庞加莱图
-    """
+    """ Draw as set in input. """
 
     if args['plot_coil'] != 0 :
         plot_coil(args, params, surface_data, loss_end)
@@ -41,18 +25,8 @@ def plot(args, coil_all, loss_end, lossvals, params, surface_data):
 
     return
 
-def plot_coil(args, params, surface_data, loss_end):    # 线圈
-    """
-    画线圈, 同时按照number_points进行加密。
+def plot_coil(args, params, surface_data, loss_end):  
 
-    Args:
-        args : dict, 参数总集
-        params : list,[fc,fr, I], 优化后参数
-        
-    Returns:
-        plot_coil == 1 : 线圈曲线, 可以画有限截面的多根曲线
-        plot_coil == 2 : 画出有限截面的表面
-    """
     if args['coil_case'] == 'spline':
         bc, tj = spline.get_bc_init(args['number_points'], args['number_control_points'])
         args['bc'] = bc
@@ -171,12 +145,6 @@ def plot_coil(args, params, surface_data, loss_end):    # 线圈
 
 
 def plot_loss(lossvals):
-    """
-    画迭代曲线
-    Args:
-        lossvals : list,[ni], 迭代数据
-        
-    """
     fig = go.Figure()
     fig.add_scatter(x = np.arange(0, len(lossvals), 1), y = lossvals, 
                         name = 'lossvalue', line = dict(width=5))
@@ -189,17 +157,6 @@ def plot_loss(lossvals):
 
 
 def plot_poincare(args, coil_all, surface_data):
-    """
-    画线圈, 同时按照number_points进行加密。
-
-    Args:
-        args : dict, 参数总集
-        coil : array,[nc,ns,nn,nb,3], 优化后线圈坐标
-        I : array,[nc], 每个线圈电流数据
-    Returns:
-        plot_poincare == 1 : poincare图
-        
-    """
     r_surf,_ ,_ = surface_data
     pn = args['poincare_number']
     phi0 = args['poincare_phi0']
@@ -213,7 +170,6 @@ def plot_poincare(args, coil_all, surface_data):
     z0 = [0 for i in range(pn)]
 
     coil = np.mean(coil_all['coil_r'], axis = (1,2))
-    # dl = np.mean(coil_all['coil_dl'], axis = (1,2))
     x = coil[:, :, 0]
     y = coil[:, :, 1]
     z = coil[:, :, 2]
@@ -223,9 +179,6 @@ def plot_poincare(args, coil_all, surface_data):
     bfield = coil_py.bfield
     line = coilpy.misc.tracing(bfield, r0, z0, args['poincare_phi0'], 
             args['number_iter'], args['number_field_periods'], args['number_step'])
-    # line = poincare_trace.tracing(coil, dl, args['poincare_r0'], args['poincare_z0'], args['poincare_phi0'], 
-    #         args['number_iter'], args['number_field_periods'], args['number_step'])
-
     line = np.reshape(line, (pn*(args['number_iter']+1), 2))
     surf = np.load("{}".format(args['surface_r_file']))[0]
     fig = go.Figure()

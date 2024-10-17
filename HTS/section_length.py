@@ -1,3 +1,4 @@
+## Here we calculate the size of the cross-section when 'length_calculate'==1.
 
 import jax.numpy as np
 import material_jcrit
@@ -13,13 +14,13 @@ def solve_section(args, coil_arg_init, fr_init, I_init):
     param = np.array(args['length_normal'])
     newlen = function_section(args, params, param)
     dlen = abs(newlen - param)
-    while (dlen > 1e-2).all():
+    while (dlen > 2e-2).all():
         param = (newlen + param) / 2
         newlen = function_section(args, params, param)
         dlen = abs(newlen - param)
     length = np.array([newlen, param])
-    args['length_normal'] = np.max(length, axis=0)
-    args['length_binormal'] = np.max(length, axis=0)
+    args['length_normal'] = np.max(length, axis=0) * 1.2
+    args['length_binormal'] = np.max(length, axis=0) * 1.2
     print(args['length_binormal'])
     return args
 
@@ -29,17 +30,15 @@ def function_section(args, params, param):
     args['length_binormal'] = param
     coil = coilset.CoilSet(args)
     B_self_input = coil.get_fb_input(params)
-    new_len = compute_section(args, B_self_input)
+    new_len = calculate_section(args, B_self_input)
     return new_len
 
 
-def compute_section(args, B_self_input):
-    '''
-    kwargs : 除计算的线圈的额外磁场
-    '''
+def calculate_section(args, B_self_input):
+
     coil, I, dl, v1, v2, binormal, curva, der2 = B_self_input
     I = I * args['I_normalize']
-    curva = 3 * curva   ### 这里手动给了一个倍率
+    curva = 3 * curva  
     strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
     strain_max = np.max(strain)
     B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 

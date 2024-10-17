@@ -10,8 +10,8 @@ all_args=['coil_optimize', 'alpha_optimize', 'I_optimize', 'iter_method', 'minim
 'length_calculate', 'length_normal', 'length_binormal', 'number_normal', 'number_binormal',
 'init_fr_case', 'init_fr_file', 'current_I', 'total_current_I',
 'number_theta', 'number_zeta',         
-'Bn_extern', 'Bn_extern_file',
-'material', 'HTS_signle_width', 'HTS_signle_thickness', 'HTS_temperature', 'HTS_I_percent', 'HTS_structural_percent',
+'Bn_background', 'Bn_background_file',
+'material', 'HTS_signle_width', 'HTS_I_thickness', 'HTS_temperature', 'HTS_I_percent', 'HTS_structural_percent',
 
 'weight_bnormal', 'weight_length', 'weight_curvature', 'weight_curvature_max', 
 'weight_torsion', 'weight_torsion_max', 'weight_distance_coil_coil', 'weight_distance_coil_surface',  
@@ -23,14 +23,14 @@ all_args=['coil_optimize', 'alpha_optimize', 'I_optimize', 'iter_method', 'minim
 'number_rotate', 'number_fourier_rotate', 'poincare_phi0', 'number_iter', 'number_step',
 'save_makegrid', 'out_coil_makegrid',]
 
-'coil_I', 'coil_alpha', 'coil_arg', 'coil_binormal', 'coil_centroid', 
+['coil_I', 'coil_alpha', 'coil_arg', 'coil_binormal', 'coil_centroid', 
 'coil_der1', 'coil_der2', 'coil_der3', 'coil_dl', 'coil_fr', 'coil_normal', 'coil_r', 
 'coil_tangent', 'coil_v1', 'coil_v2', 
 'loss_B', 'loss_B_coil', 'loss_B_coil_max', 'loss_B_coil_theta', 'loss_B_max_surf', 'loss_Bn', 
 'loss_Bn_mean', 'loss_HTS_Icrit', 'loss_HTS_jcrit', 'loss_curva', 'loss_curva_max', 'loss_curvature', 
 'loss_dcc_min', 'loss_dcs_min', 'loss_force_max', 'loss_force_mean', 'loss_length_mean', 'loss_length_single', 
 'loss_strain', 'loss_strain_max', 'loss_tor', 'loss_tor_max', 'loss_tor_mean', 
-'loss_vals', 
+'loss_vals', ]
 
 
 
@@ -53,7 +53,7 @@ def read_hdf5(filename):
     return arge
 
 
-filename = 'results/paper/QA/opt_1_6.h5'
+filename = 'results/paper/QA/opt_4.h5'
 arge = read_hdf5(filename)
 
 
@@ -74,6 +74,6 @@ for key in list(all_args):
 # for key in list(losskeys):
 #     print("{} = ".format(key), arge['{}'.format(key)])
 
-# print(arge['loss_vals'])
+print(len(arge['loss_vals']), arge['loss_vals'])
 
 

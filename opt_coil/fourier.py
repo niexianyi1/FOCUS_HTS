@@ -1,12 +1,13 @@
+## Fourier representation 
+
 import jax.numpy as np
 from jax import config
 config.update("jax_enable_x64", True)
 pi = np.pi
 
-def compute_coil_fourierSeries(coil, nfc):
+def calculate_coil_fourierSeries(coil, nfc):
     """ 
-    Takes a set of centroid positions and gives the coefficients
-    of the coil fourier series in a single array 
+    Calculate Fourier coefficients for the specified coil coordinates
 
     Inputs:
     r_centroid (nparray): vector of length [nic, (ns + 1), 3], initial coil centroid
@@ -15,7 +16,7 @@ def compute_coil_fourierSeries(coil, nfc):
     nic x 6 x nfc array with the Fourier Coefficients of the initial coils
     """
     nic, ns = coil.shape[0], coil.shape[1]-1
-    x = coil[:, :-1, 0]  # nic x ns
+    x = coil[:, :-1, 0]  
     y = coil[:, :-1, 1]
     z = coil[:, :-1, 2]
     xc = np.zeros((nic, nfc))
@@ -36,11 +37,11 @@ def compute_coil_fourierSeries(coil, nfc):
         ys = ys.at[:, m].set(2.0 * np.sum(y * np.sin(m * theta), axis=1) / ns)
         zs = zs.at[:, m].set(2.0 * np.sum(z * np.sin(m * theta), axis=1) / ns)
     fc = np.asarray([xc, yc, zc, xs, ys, zs])   
-    fc = np.transpose(fc, (1, 0, 2))            # nic x 6 x nfc
+    fc = np.transpose(fc, (1, 0, 2))           
     return fc  
 
-def compute_r_centroid(fc, ns):
-    """ Computes the position of the winding pack centroid using the coil fourier series """
+def calculate_r_centroid(fc, ns):
+    """ Calculate the position of the winding pack centroid using the coil fourier series """
     theta = np.linspace(0, 2 * pi, ns + 1)
     nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
@@ -61,7 +62,7 @@ def compute_r_centroid(fc, ns):
         (x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis=2)
     return rc
 
-def compute_der1(fc, ns):
+def calculate_der1(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
     nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
@@ -82,7 +83,7 @@ def compute_der1(fc, ns):
         (x1[:, :, np.newaxis], y1[:, :, np.newaxis], z1[:, :, np.newaxis]), axis=2)
     return der1
 
-def compute_der2(fc, ns):
+def calculate_der2(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
     nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
@@ -104,7 +105,7 @@ def compute_der2(fc, ns):
         (x2[:, :, np.newaxis], y2[:, :, np.newaxis], z2[:, :, np.newaxis]), axis=2)
     return der2
 
-def compute_der3(fc, ns):
+def calculate_der3(fc, ns):
     theta = np.linspace(0, 2 * pi, ns + 1)
     nic, nfc = fc.shape[0], fc.shape[2]
     xc, yc, zc, xs, ys, zs = fc[:, 0], fc[:, 1], fc[:, 2], fc[:, 3], fc[:, 4], fc[:, 5]
@@ -127,10 +128,39 @@ def compute_der3(fc, ns):
     return der3
 
 
+def calculate_fourier_alpha(fr, ns, nr):
+    nic, nfr = fr.shape[0], fr.shape[2]
+    alpha = np.zeros((nic, ns+1))
+    theta = np.linspace(0, 2 * pi, ns + 1)
+    alpha += theta * nr / 2
+    Ac = fr[:, 0]
+    As = fr[:, 1]
+    for m in range(nfr):
+        arg = theta * m
+        carg = np.cos(arg)
+        sarg = np.sin(arg)
+        alpha += (
+            Ac[:, np.newaxis, m] * carg[np.newaxis, :]
+            + As[:, np.newaxis, m] * sarg[np.newaxis, :]
+        )
+    return alpha[:, :-1]
 
 
-
-
+def calculate_fourier_alpha_der1(fr, ns):
+    nic, nfr = fr.shape[0], fr.shape[2]
+    alpha_1 = np.zeros((nic, ns+1))
+    theta = np.linspace(0, 2 * pi, ns + 1)
+    Ac = fr[:, 0]
+    As = fr[:, 1]
+    for m in range(nfr):
+        arg = theta * m
+        carg = np.cos(arg)
+        sarg = np.sin(arg)
+        alpha_1 += (
+            -m * Ac[:, np.newaxis, m] * sarg[np.newaxis, :]
+            + m * As[:, np.newaxis, m] * carg[np.newaxis, :]
+        )
+    return alpha_1[:, :-1]
 
 
 

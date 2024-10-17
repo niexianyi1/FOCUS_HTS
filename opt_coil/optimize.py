@@ -1,5 +1,5 @@
 
-### 运行脚本, python执行即可
+### The main iteration Settings
 
 import jax.numpy as np
 from jax import value_and_grad, jit, config
@@ -23,21 +23,18 @@ n = 0
 
 def main():
     
-    with open('initfiles/init_args.json', 'r') as f:    # 传入地址
+    with open('initfiles/init_args.json', 'r') as f:    # json file address, fixed.
         args = json.load(f)
     globals().update(args)
     
-    # 获取初始数据, 优化从Line156开始
+    # Initial data is obtained and optimization starts on Line 156.
     args, coil_arg_init, fr_init, surface_data, I_init = read_init.init(args)
     loss_vals = []
 
 
-    # 三种迭代函数
+    # Three kinds of iterative functions
     @jit
     def objective_function_jax(args, opt_state_coil_arg, opt_state_fr, opt_state_I):
-        """
-        迭代过程, 通过value_and_grad得到导数值和loss值, 
-        """   
         I = get_params_I(opt_state_I)
         params = (get_params_coil_arg(opt_state_coil_arg), get_params_fr(opt_state_fr), I)
         coil_cal = CoilSet(args)
@@ -61,7 +58,7 @@ def main():
         loss_val, gradient = value_and_grad(
             lambda params :lossfunction.loss_value(args, coil_output_func, params, surface_data),
             allow_int = True)(params)    
-        g = compute_grad(args, gradient)
+        g = calculate_grad(args, gradient)
         loss_vals.append(loss_val)
         print('iter = ', n, 'value = ', loss_val)
         return loss_val, g
@@ -77,14 +74,14 @@ def main():
             lambda params :lossfunction.loss_value(args, coil_output_func, params, surface_data),
             allow_int = True)(params)    
         if grad.size > 0:
-            g = compute_grad(args, gradient)
+            g = calculate_grad(args, gradient)
             grad[:] = list(numpy.array(g))
         loss_val = numpy.float64(loss_val)    
         loss_vals.append(loss_val)
         print('iter = ', n, 'value = ', loss_val)
         return loss_val
 
-    ## 不等式约束
+    ## Inequality constraint for nlopt
     @jit
     def constrain_nlopt(params, grad):
         params = list_to_params(params)   
@@ -94,7 +91,7 @@ def main():
             lambda params :hts_strain.cn(args, coil_output_func, params),
             allow_int = True)(params)    
         if grad.size > 0:
-            g = compute_grad(args, gradient)
+            g = calculate_grad(args, gradient)
             grad[:] = list(numpy.array(g))
         value = numpy.float64(value)    
         print('constrain_value = ', value)
@@ -119,16 +116,16 @@ def main():
         def coil_arg_spline(args, params, nic):
             return np.reshape(params[:nic * 3 * (args['number_control_points']-3)], 
                                 (nic, 3, (args['number_control_points']-3)) )
-        compute_coil_arg = dict()
-        compute_coil_arg['fourier'] = coil_arg_fourier
-        compute_coil_arg['spline'] = coil_arg_spline
-        compute_func = compute_coil_arg[args['coil_case']]
-        coil_arg = compute_func(args, params, nic)
+        calculate_coil_arg = dict()
+        calculate_coil_arg['fourier'] = coil_arg_fourier
+        calculate_coil_arg['spline'] = coil_arg_spline
+        calculate_func = calculate_coil_arg[args['coil_case']]
+        coil_arg = calculate_func(args, params, nic)
         params = (coil_arg, fr, I)  
         return params
 
     @jit
-    def compute_grad(args, gradient):
+    def calculate_grad(args, gradient):
         if args['coil_optimize'] == 0:
             if args['coil_case'] == 'fourier':
                 grad0 = np.array([0 for i in range(
@@ -151,8 +148,8 @@ def main():
         return grad
 
 
-    # 迭代循环, 得到导数, 带入变量, 得到新变量
-    # 分两种情况, 固定迭代次数、给定迭代目标残差
+    # iteration
+    # There are two cases: fixed iteration number(jax) and given tolerance(min,nlopt).
     start = time.time()
     if args['iter_method'] == 'jax':     
         opt = read_init.jax_op(args)   
@@ -194,7 +191,7 @@ def main():
     end = time.time()
     print('time cost = ', end - start)
     
-    # 得到优化后的线圈参数, 保存到文件中
+    # The optimized coil parameters are saved and drawn.
     coil_cal = CoilSet(args)
     coil_output_func = coil_cal.cal_coil 
     coil_all = coil_cal.end_coil(params)

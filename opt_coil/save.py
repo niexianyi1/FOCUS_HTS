@@ -1,6 +1,5 @@
+## After optimization, save the data to a file
 
-
-## 运行结束，保存数据到文件
 str.encode('utf-8')
 import h5py
 import jax.numpy as np
@@ -16,14 +15,7 @@ def save_file(args, loss_vals, coil_all, loss_end, surface_data):
     return
 
 
-def save_hdf5(args, coil_all, loss_end, surface_data, loss_vals):     # 根据需求写入数据
-    """ Write coils in HDF5 output format.
-    Input:
-
-    output_file (string): Path to outputfile, string should include .hdf5 format
-
-    """
-
+def save_hdf5(args, coil_all, loss_end, surface_data, loss_vals):     
     with h5py.File(args['out_hdf5'], "w") as f:
         if args['coil_case'] == 'spline' or args['coil_case'] == 'spline_local':
             bc = args['bc']
@@ -44,7 +36,7 @@ def save_hdf5(args, coil_all, loss_end, surface_data, loss_vals):     # 根据�
     return
 
 
-def save_makegrid(args, coil_all):    # 或者直接输入r, I
+def save_makegrid(args, coil_all):   
     r = coil_all['coil_r']
     I = coil_all['coil_I']
     with open(args['out_coil_makegrid'], "w") as f:

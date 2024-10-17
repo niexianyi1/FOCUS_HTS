@@ -1,33 +1,24 @@
+## Calculate loss function(also cost function) values.
+
 import jax.numpy as np
 from jax import jit, config
+import numpy
 import sys 
 sys.path.append('HTS')
 import hts_strain
 import B_self
-import section_length
 import material_jcrit
 config.update("jax_enable_x64", True)
 pi = np.pi
 
-# 应变项调整减数
-# 自场需要扫描一下极值点
-# 临界电流密度的量级要对上
-
-
 
 @jit
 def loss_value(args, coil_output_func, params, surface_data):
-    """ 
-    Input: params, a tuple of the fourier series for the coils and a fourier series for the rotation.
 
-    Output: A scalar, which is the loss_val computed by the function. JAX will eventually differentiate
-    this in an optimizer.
-    """
     I, dl, coil, der1, der2, der3, v1, v2, binormal = coil_output_func(params)
     curva = curvature(der1, der2)
     I = I * args['I_normalize']
     weight, loss = weight_and_loss(args)
-
 
     if args['weight_bnormal'] != 0:
         Bn_mean, _, _, _ = quadratic_flux(args, I, dl, coil, surface_data)
@@ -75,8 +66,8 @@ def loss_value(args, coil_output_func, params, surface_data):
         strain = hts_strain.HTS_strain(args, curva, v1, v2, dl)
         strain = np.max(strain, axis=1)
         B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2)
-        Bx, By = B_coil_normal(B_coil, v1, v2)
-        j_crit, _ = Jcrit(args, B_coil, strain, Bx, By)
+        B_coil_theta = calculate_B_theta(B_coil, v1, v2)
+        j_crit, _ = Jcrit(args, B_coil, strain, B_coil_theta)
         I_crit = Icrit(args, j_crit)
         loss_I = np.min(I_crit)
         loss[10] = loss_I
@@ -87,7 +78,7 @@ def loss_value(args, coil_output_func, params, surface_data):
         loss[11] = strain_mean
 
     loss = np.array(loss)
-##  if loss_weight_normalization
+
     if args['loss_weight_normalization'] == 0:
         lossvalue = np.sum(np.array(weight) * np.array(loss)
 )
@@ -107,7 +98,7 @@ def weight_and_loss(args):
     for key in args:
         k = key.split('_')
         if k[0] == 'weight':
-            weight.append(key)
+            weight.append(args['{}'.format(key)])
     l = len(weight)
     loss = [0 for i in range(l)]
     return weight, loss
@@ -115,47 +106,34 @@ def weight_and_loss(args):
 
 
 def quadratic_flux(args, I, dl, coil, surface_data):
-    """ 
-    Computes the normalized quadratic flux over the whole surface.
-    Inputs:
-    r : Position we want to evaluate at, NZ x NT x 3
-    I : Current in ith coil, length NC
-    dl : Vector which has coil segment length and direction, NC x NS x NNR x NBR x 3
-    l : Positions of center of each coil segment, NC x NS x NNR x NBR x 3
-    nn : Normal vector on the surface, NZ x NT x 3
-    sg : Area of the surface, 
-    
-    Returns: 
-    A NZ x NT array which computes integral of 1/2(B dot n)^2 dA / integral of B^2 dA. 
-    We can eventually sum over this array to get the total integral over the surface. I choose not to
-    sum so that we can compute gradients of the surface magnetic normal if we'd like. 
-    """
+    """ Calculate the normal error field. """
     r_surf, nn, sg = surface_data
     I = I / args['number_normal'] / args['number_binormal'] 
 
     mu_0 = 1e-7 
     mu_0I = I * mu_0
-    mu_0Idl = (mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * dl)  # NC x NNR x NBR x NS x 3
+    mu_0Idl = (mu_0I[:, np.newaxis, np.newaxis, np.newaxis, np.newaxis] * dl) 
     r_minus_l = (r_surf[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis, :]
-        - coil[:, np.newaxis, np.newaxis, :, :, :, :])  # NC x NZ/nfp x NT x NNR x NBR x NS x 3
-    top = np.cross(mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l)  # NC x NZ x NT x NNR x NBR x NS x 3
-    bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  # NC x NZ x NT x NNR x NBR x NS
-    B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5))  # NZ x NT x 3
+        - coil[:, np.newaxis, np.newaxis, :, :, :, :])  
+    top = np.cross(mu_0Idl[:, np.newaxis, np.newaxis, :, :, :, :], r_minus_l)  
+    bottom = (np.linalg.norm(r_minus_l, axis=-1) ** 3)  
+    B = np.sum(top / bottom[:, :, :, :, :, :, np.newaxis], axis=(0, 3, 4, 5)) 
 
     Bmax = np.max(np.linalg.norm(B, axis=-1))
     bn = np.sum(nn * B, axis=-1)
-    if args['Bn_extern'] != 0:
-        Bn = abs(bn + args['Bn_extern_surface'])
+    if args['Bn_background'] != 0:
+        Bn = abs(bn + args['Bn_background_surface'])
     else:
         Bn = abs(bn)
     Bn_mean = np.sum(Bn / np.linalg.norm(B, axis=-1) * sg) / np.sum(sg)
     return  Bn_mean, Bmax, B, Bn
 
 
-def average_length(args, coil):      #new
+def average_length(args, coil):   
+    """ Calculate the length of coils. """  
     nic = args['number_independent_coils']   
     deltal = np.zeros((nic, coil.shape[3], 3))   
-    r_coil = np.mean(coil[:nic], axis = (1,2))   # 有限截面平均
+    r_coil = np.mean(coil[:nic], axis = (1,2))   
     deltal = deltal.at[:, :-1, :].set(r_coil[:, 1:, :] - r_coil[:, :-1, :])
     deltal = deltal.at[:, -1, :].set(r_coil[:, 0, :] - r_coil[:, -1, :])
     len_mean = np.sum(np.linalg.norm(deltal, axis=-1)) / nic
@@ -174,19 +152,22 @@ def curvature_mean_max(curva):
     return k_mean, k_max
 
 
-def torsion(args, der1, der2, der3, coil):       # new
+def torsion(args, der1, der2, der3, coil):   
+    ''' Calculate torsion of coils. 
+    There is no continuous third derivative for Cubic(k=3) B-spline, 
+    so it is calculated by microcentral difference method'''    
     if args['coil_case'] == 'fourier':
         cross12 = np.cross(der1, der2)
         top = ( cross12[:, :, 0] * der3[:, :, 0] + 
                 cross12[:, :, 1] * der3[:, :, 1] +
                 cross12[:, :, 2] * der3[:, :, 2])
         bottom = np.linalg.norm(cross12, axis=-1) ** 2
-        t = abs(top / bottom)     # NC x NS
+        t = abs(top / bottom)     
     else:
         ns = args['number_segments']
         nic = args['number_independent_coils']
         coil = np.mean(coil[:nic], (1, 2))
-        dt = 1 / ns ### 此参数为无关变量，都会被约分
+        dt = 1 / ns 
         d1, d2, d3 = np.zeros((nic, ns, 3)), np.zeros((nic, ns, 3)), np.zeros((nic, ns, 3))
         d1 = d1.at[:, 1:-1, :].set((coil[:, 2:, :] - coil[:, :-2, :]) / 2 / dt)
         d1 = d1.at[:, 0, :].set((coil[:, 1, :] - coil[:, -1, :]) / 2 / dt)
@@ -214,7 +195,8 @@ def torsion_mean_max(tor):
     return t_mean, t_max
 
 
-def distance_cc(args, coil):  ### 暂未考虑finite-build, 边界处的距离算了2种情况
+def distance_cc(args, coil):  
+    ''' Distance between adjacent coils. '''
     nic = args['number_independent_coils']  
     ns = args['number_segments']
     rc = np.mean(coil, axis = (1,2))
@@ -230,7 +212,8 @@ def distance_cc(args, coil):  ### 暂未考虑finite-build, 边界处的距离�
     dcc_min = np.min(dr)
     return dcc_min
 
-def distance_cs(args, coil, surface_data):  ### 暂未考虑finite-build
+def distance_cs(args, coil, surface_data): 
+    ''' Distance between magnetic surface and coils.'''
     nic = args['number_independent_coils'] 
     rc = np.mean(coil[:nic], axis = (1,2))
     rs, _, _ = surface_data
@@ -241,13 +224,14 @@ def distance_cs(args, coil, surface_data):  ### 暂未考虑finite-build
     return dcs_min
 
 
-def B_coil_normal(B_reg, v2):
-    B_coil_theta = np.arccos(np.sum(B_reg * v2, axis=-1) / np.linalg.norm(B_reg, axis=-1) - 1e-8)                                    
+def calculate_B_theta(B_reg, v2):
+    eps = numpy.spacing(1)
+    B_coil_theta = np.arccos(np.sum(B_reg * v2, axis=-1) / np.linalg.norm(B_reg, axis=-1) - eps)                                    
     B_coil_theta = np.max(B_coil_theta)
     return B_coil_theta
 
 
-def Jcrit(args, B_coil, strain):#, Bx, By
+def Jcrit(args, B_coil, strain, B_coil_theta):
     k2 = 0.2**2
     beta = 0.65
     nic = args['number_independent_coils']
@@ -259,11 +243,14 @@ def Jcrit(args, B_coil, strain):#, Bx, By
                         B_coil[i], strain[i], args['material'])
         jc0 = jc0.at[i].set(j)
         Bc = Bc.at[i].set(b)
-    # assert B_coil.all() < np.min(Bc)
-    # jc = jc0 / (1 + (k2*Bx**2 + By**2)**0.5 / B_self) ** beta
-    return jc0, Bc
+    if B_coil.all() > np.min(Bc):
+        print('warning: magnetic field in coils over the critical field of HTS.')
 
-def calculate_force(I, B_reg, dl):  ### 应该除以每个线圈的长度
+    jc = jc0 / (1 + (k2*(B_coil*np.cos(B_coil_theta))**2 + 
+            (B_coil*np.sin(B_coil_theta))**2)**0.5 / B_self) ** beta
+    return jc, Bc
+
+def calculate_force(I, B_reg, dl):  
     nic = B_reg.shape[0]
     dl = np.mean(dl[:nic], axis=(1,2))
     tan = dl / np.linalg.norm(dl, axis=-1)[:, :, np.newaxis]
@@ -272,8 +259,6 @@ def calculate_force(I, B_reg, dl):  ### 应该除以每个线圈的长度
     force_coil = np.sum(np.linalg.norm(np.sum(force_coil , axis=1),axis=-1)) / nic
     force_max = np.max(np.linalg.norm(force, axis=-1))
     return force_max, force_coil
-
-
 
 def Icrit(args, j_crit):
     jc = np.array(j_crit)
@@ -284,7 +269,7 @@ def Icrit(args, j_crit):
 
 
 def loss_save(args, coil_output_func, params, surface_data):
-
+    """After the optimization is finished, the parameters are saved through the dictionary"""
     I, dl, coil, der1, der2, der3, v1, v2, binormal = coil_output_func(params)
     I = I * args['I_normalize']
     Bn_mean, B_max_surf, B, Bn = quadratic_flux(args, I, dl, coil, surface_data)
@@ -300,10 +285,10 @@ def loss_save(args, coil_output_func, params, surface_data):
     strain_max = np.max(strain)
     B_reg = B_self.coil_B_force(args, coil, I, dl, v1, v2, binormal, curva, der2)
     force_max, force_mean = calculate_force(I, B_reg, dl)
-    B_coil_theta = B_coil_normal(B_reg, v2)
+    B_coil_theta = calculate_B_theta(B_reg, v2)
     B_coil = B_self.coil_self_B_rec(args, coil, I, dl, v1, v2, binormal, curva, der2) 
     B_coil_max = np.max(np.linalg.norm(B_coil, axis=-1), axis = (1,2))
-    j_crit, Bc = Jcrit(args, B_coil_max, strain_coil)#, Bx, By
+    j_crit, Bc = Jcrit(args, B_coil_max, strain_coil, B_coil_theta)
     if B_coil_max.all() > np.min(Bc):
         print("Warning : B_coil_max > B_crit")
     I_coil_crit = Icrit(args, j_crit)

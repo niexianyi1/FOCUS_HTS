@@ -1,6 +1,6 @@
 
-### 获取初始线圈, 磁面
-### 包含各种文件类型的读取
+### Initialization of the program.
+
 
 
 import jax.numpy as np
@@ -16,42 +16,30 @@ import section_length
 
 def init(args):
     """
-    根据args的参数给出初始条件, 包括线圈变量, 电流, 磁面等
-
-    Args:
-        args : dict,    参数总集
+    Initialization of the program.
 
     Returns:
-        args : dict,    新的参数总集， 添加了电流项和spline表示的非优化参数
-        coil_arg_init : 表示线圈的变量, 类型由coil_case给定
-        fr_init :       表示线圈旋转的变量
-        surface_data :  磁面数据
-        # B_extern :    额外磁场, 一般为背景磁场
+        args            : dict,     new args with additional information.
+        coil_arg_init   : array,    Represents the coil centerline.
+        fr_init         : array,    Represents the rotation of the coil.
+        surface_data    : tuple,    Magnetic surface data
+        Bn_background   : array,    background magnetic field
     """
     args['number_independent_coils'] = int(args['number_coils'] / 
                     args['number_field_periods'] / (args['stellarator_symmetry'] + 1))
     args, surface_data = get_surface_data(args)
-    args, coil_arg_init, fr_init = coil_init(args, surface_data)    # coil_arg：线圈参数, Fourier或spline表示
+    args, coil_arg_init, fr_init = coil_init(args, surface_data)  
     args, I_init = init_I(args)
     args = get_finite_build_length(args, coil_arg_init, fr_init, I_init)
-    if args['Bn_extern'] != 0:
-        args = get_Bn_extern(args)
+    if args['Bn_background'] != 0:
+        args = get_Bn_background(args)
     args = test(args, coil_arg_init)
 
     return args, coil_arg_init, fr_init, surface_data, I_init
 
 
 def jax_op(args):
-    """
-    根据给定的jax的梯度下降迭代方式, 获取迭代变量
-
-    Args:
-        args :      dict,   参数总集
-        optimizer : str,    迭代方式
-        step_size :        float,  迭代步长
-    Returns:
-        An (init_fun, update_fun, get_params) triple.
-    """
+    """ jax optimize """
     if args['coil_optimize'] == 0:
         step_size_coil = 0
     else:
@@ -78,6 +66,7 @@ def jax_op(args):
 
 
 def nlopt_op(args, params):
+    ''' nlopt optimize '''
     if args['nlopt_algorithm'] == 'LD_MMA':
         return nlopt.opt(nlopt.LD_MMA, len(params))
     if args['nlopt_algorithm'] == 'LD_CCSAQ':
@@ -86,25 +75,13 @@ def nlopt_op(args, params):
         return nlopt.opt(nlopt.LD_LBFGS, len(params))
 
 
-def get_surface_data(args):           # surface data的获取
-    """
-    获取磁面参数
-    """
+def get_surface_data(args):          
     args, r, nn, sg = read_file.read_plasma(args)
     surface_data = (r, nn, sg)
     return args, surface_data
 
 
-def init_I(args):
-    """
-    获取初始电流
-    Args:
-        args : dict,    参数总集
-
-    Returns:
-        args : dict,  新的参数总集, 添加电流项
-
-    """    
+def init_I(args):  
     nic = args['number_independent_coils']
     if 'makegrid_I' in args.keys():
         I = args['makegrid_I']  
@@ -124,26 +101,14 @@ def init_I(args):
 
 
 def coil_init(args, surface_data):
-    """
-    获取线圈初始参数, 按照选择的表示方式给出
-    Args:
-        args : dict,    参数总集
 
-    Returns:
-        args :          dict,  新的参数总集, 添加对应表达式的非优化参数
-        coil_arg_init : array, 线圈的初始优化参数
-            fc_init :   array, [6, nic, nfc], fourier表示的初始参数
-            c_init :    array, [nic, ncp-3], spline表示的初始参数, 不包含重复的控制点。
-        fr_init :       array, [2, nic, nfr], 有限截面旋转的初始数据
-    """    
-    
     nic = args['number_independent_coils']
     nc = args['number_coils']
     ns = args['number_segments']
 
     surface, _, _ = surface_data
     
-    ## 有限截面旋转角
+    ## Rotation Angle
     if args['init_fr_case'] == 0:
         fr_init = np.zeros((nic, 2, args['number_fourier_rotate'])) 
         
@@ -155,7 +120,7 @@ def coil_init(args, surface_data):
             arge = read_file.read_hdf5(args['init_fr_file'])
             fr_init = np.array(arge['coil_fr'])
 
-    ## 线圈参数
+    ## coil centerline
     if args['coil_case'] == 'fourier':
         if args['init_coil_option'] == 'fourier':
             file = args['init_coil_file'].split('.')
@@ -175,11 +140,11 @@ def coil_init(args, surface_data):
             else:
                 coil, I = read_file.read_makegrid(args['init_coil_file'], nc, nic)         
                 args['makegrid_I'] = I 
-            fc_init = fourier.compute_coil_fourierSeries(coil, args['number_fourier_coils'])
+            fc_init = fourier.calculate_coil_fourierSeries(coil, args['number_fourier_coils'])
 
         elif args['init_coil_option'] == 'circle':
             coil = circle_coil(args, surface)
-            fc_init = fourier.compute_coil_fourierSeries(coil, args['number_fourier_coils'])
+            fc_init = fourier.calculate_coil_fourierSeries(coil, args['number_fourier_coils'])
         
         coil_arg_init = fc_init
         return args, coil_arg_init, fr_init
@@ -246,6 +211,7 @@ def coil_init(args, surface_data):
 
 
 def circle_coil(args, surface):
+    ''' initial coils '''
     nfc = args['number_fourier_coils']
     nz = args['number_zeta']
     r = args['circle_coil_radius']
@@ -256,8 +222,8 @@ def circle_coil(args, surface):
     axis = axis.at[:-1].set(np.mean(surface, axis = 1))
     axis = axis.at[-1].set(axis[0])
     axis = axis[np.newaxis, :, :]
-    fa = fourier.compute_coil_fourierSeries(axis, nfc)
-    axis = fourier.compute_r_centroid(fa, 2*nc)
+    fa = fourier.calculate_coil_fourierSeries(axis, nfc)
+    axis = fourier.calculate_r_centroid(fa, 2*nc)
     axis = np.squeeze(axis)[:-1]
 
     circlecoil = np.zeros((nic, ns+1, 3))
@@ -285,7 +251,7 @@ def local_coil(args, c_init):
     for i in range(lo_nc):
         lenai = len(a[i])
         coil_args = []
-        for j in range(lenai):          # 需要加判断避免超出边界 或 重复计入控制点
+        for j in range(lenai):          
             start = int(a[i][j][0])
             end = int(a[i][j][1])
             coil_arg = [c_init[int(loc[i]), :, start:end]]
@@ -303,9 +269,10 @@ def get_finite_build_length(args, coil_arg_init, fr_init, I_init):
         lb = np.max(np.array(args['length_binormal']))
         args['length_binormal'] = [lb for i in range(nic)]  
     if args['length_calculate'] == 1:
+        assert args['number_normal'] > 1 and args['number_binormal'] > 1
         args = section_length.solve_section(args, coil_arg_init, fr_init, I_init)
         print('Complete section calculation.')
-    a = np.array(args['length_normal']) * (args['number_normal'] - 1)   # 正方形截面
+    a = np.array(args['length_normal']) * (args['number_normal'] - 1)  
     b = np.array(args['length_binormal']) * (args['number_binormal'] - 1)    
     k = (4*b/(3*a)*np.arctan(a/b) + 4*a/(3*b)*np.arctan(b/a) + b**2/(6*a**2)*np.log(b/a)+
             a**2/(6*b**2)*np.log(a/b) - (a**4-6*(a*b)**2+b**4)/(6*(a*b)**2)*np.log(a/b+b/a) )
@@ -314,25 +281,26 @@ def get_finite_build_length(args, coil_arg_init, fr_init, I_init):
     return args    
 
 
-def get_Bn_extern(args):
-    if args['Bn_extern'] == 1:
+def get_Bn_background(args):
+    if args['Bn_background'] == 1:
         Bn = read_file.read_finite_beta_Bn(args)    
-        args['Bn_extern_surface'] = Bn
+        args['Bn_background_surface'] = Bn
     return args
 
 
 def test(args, coil_arg_init):
 
-    ## fourier系数和spline系数
     if args['coil_case'] == 'fourier':
         assert args['number_fourier_coils'] == coil_arg_init.shape[2]
     else :
         assert args['number_control_points'] == coil_arg_init.shape[2] + 3
-    
 
     assert args['number_independent_coils'] == coil_arg_init.shape[0]
+    if args['number_normal'] == 1:
+        assert  args['number_binormal'] == 1
+    elif args['number_normal'] > 1:
+        assert  args['number_binormal'] > 1
 
-    ## 线圈最小间距应大于截面的长度
     nlen = np.max(np.array(args['length_normal'])) * (args['number_normal'] - 1)
     blen = np.max(np.array(args['length_binormal'])) * (args['number_binormal'] - 1)
     max_len = np.sqrt(nlen**2 + blen**2)

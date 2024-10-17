@@ -1,9 +1,10 @@
-## 计算与HTS相关的线圈应变
+## Calculate the HTS tape strain.
 
 import jax.numpy as np
 import numpy
 
 def cn(args, coil_output_func, params):
+    '''This function is an inequality constraint for nlopt.'''
     _, dl, _, der1, der2, _, v1, v2, _ = coil_output_func(params)
     curva = np.cross(der1, der2) / (np.linalg.norm(der1, axis = -1)**3)[:,:,np.newaxis]
     strain = HTS_strain(args, curva, v1, v2, dl)
@@ -12,6 +13,7 @@ def cn(args, coil_output_func, params):
 
 
 def HTS_strain(args, curva, v1, v2, dl):
+    '''Calculate the HTS tape strain.'''
     width = args['HTS_single_width']
     thickness = args['HTS_single_thickness']
     dl = np.mean(dl[:args['number_independent_coils']], axis=(1,2))
@@ -20,32 +22,8 @@ def HTS_strain(args, curva, v1, v2, dl):
     easy_bend = HTS_strain_easy_bend(thickness, curva, v2)
     return hard_bend + tor + easy_bend
 
-def HTS_strain_hard_bend(width, curva, v):
-    """弯曲应变,
-    Args:
-        w, 带材宽度
-        v,有限截面坐标轴
-        curva, 线圈曲率
-
-    Returns:
-        bend, 弯曲应变
-
-    """
-    ### 此处width应取单根线材的宽度，而非总线缆的宽度
-    bend = width/2*abs(np.sum(abs(v * curva), axis=-1))
-    return bend
-
 def HTS_strain_tor(width, dl, v):
-    """扭转应变,
-    Args:
-        w, 带材宽度
-        v,有限截面坐标轴
-        dl, 线圈点间隔
-
-    Returns:
-        tor, 扭转应变
-
-    """
+    '''d_theta can be calculated by arcsin or arccos, but behave slightly differently in optimization'''
     eps = numpy.spacing(1)
     # cosv = np.zeros((v.shape[0], v.shape[1]))
     # cosv = cosv.at[:, :-1].set(np.sum(v[:, :-1, :] * v[:, 1:, :], axis=-1) ) # 此处分母都为1，省略
@@ -60,14 +38,16 @@ def HTS_strain_tor(width, dl, v):
     if np.min(sinv) == 0 and np.max(sinv) < 1-1e-8:
         sinv = sinv + eps
     dtheta = np.arcsin(sinv)
+
     dl = np.linalg.norm(dl, axis = -1)
     tor = width**2/12*(dtheta/dl)**2
     return tor
 
-
+def HTS_strain_hard_bend(width, curva, v):
+    bend = width/2*abs(np.sum(abs(v * curva), axis=-1))
+    return bend
 
 def HTS_strain_easy_bend(thickness, curva, v):
-
     bend = thickness/2*abs(np.sum(abs(v * curva), axis=-1))
     return bend
 
