@@ -1,7 +1,7 @@
 
 
 'optimizer', 'step_size', 'surface_file','loss_weight_normalization',  
-all_args=['coil_optimize', 'alpha_optimize', 'I_optimize', 'iter_method', 'minimize_method', 
+init_args=['coil_optimize', 'alpha_optimize', 'I_optimize', 'iter_method', 'minimize_method', 
 'minimize_tol', 'nlopt_algorithm', 'stop_criteria', 'inequality_constraint_strain', 
 'number_iteration', 
 'number_coils', 'number_field_periods', 'stellarator_symmetry', 'number_segments',
@@ -11,8 +11,7 @@ all_args=['coil_optimize', 'alpha_optimize', 'I_optimize', 'iter_method', 'minim
 'init_fr_case', 'init_fr_file', 'current_I', 'total_current_I',
 'number_theta', 'number_zeta',         
 'Bn_background', 'Bn_background_file',
-'material', 'HTS_signle_width', 'HTS_I_thickness', 'HTS_temperature', 'HTS_I_percent', 'HTS_structural_percent',
-
+'material', 'HTS_single_width', 'HTS_single_thickness', 'HTS_temperature', 'HTS_I_percent', 'HTS_structural_percent',
 'weight_bnormal', 'weight_length', 'weight_curvature', 'weight_curvature_max', 
 'weight_torsion', 'weight_torsion_max', 'weight_distance_coil_coil', 'weight_distance_coil_surface',  
 'weight_HTS_strain', 'weight_HTS_force_max', 'weight_HTS_force_mean', 'weight_HTS_Icrit', 
@@ -53,27 +52,26 @@ def read_hdf5(filename):
     return arge
 
 
-filename = 'results/paper/QA/opt_4.h5'
+filename = 'results/w7x/w7x_coils.h5'
 arge = read_hdf5(filename)
 
 
 
-weight = ['weight_bnormal', 'weight_length', 'weight_curvature', 
-'weight_curvature_max', 'weight_distance_coil_coil', 'weight_distance_coil_surface', 'weight_HTS_Icrit', 'weight_HTS_force', 
-'weight_torsion', 'weight_torsion_max']
+weight = ['weight_bnormal', 'weight_length', 'weight_curvature', 'weight_curvature_max', 
+'weight_torsion', 'weight_torsion_max', 'weight_distance_coil_coil', 'weight_distance_coil_surface', 
+'weight_HTS_strain', 'weight_HTS_force_max', 'weight_HTS_force_mean', 'weight_HTS_Icrit']
 losskeys = ['loss_Bn_mean','loss_length_mean','loss_length_single','loss_curvature','loss_curva_max','loss_tor_mean','loss_tor_max',
-'loss_dcc_min','loss_dcs_min','loss_strain_max','loss_force_mean','loss_force_max','loss_B_coil_max','loss_HTS_Icrit']
-target = ['target_length_mean', 'target_curvature_max', 'target_torsion_max', 'target_distance_coil_coil',
-'target_distance_coil_surface', 'target_HTS_strain','target_HTS_force_max']
-for key in list(all_args):
-    print(arge['{}'.format(key)])
-# for key in list(weight):
+'loss_dcc_min','loss_dcs_min','loss_strain_max','loss_force_mean','loss_force_max','loss_B_coil_max','loss_HTS_Icrit', 'loss_HTS_jcrit']
+target = ['target_length_mean', 'target_length_single', 'target_curvature_max', 'target_torsion_max', 
+'target_distance_coil_coil', 'target_distance_coil_surface', 'target_HTS_strain','target_HTS_force_max']
+# for key in list(init_args):
 #     print(arge['{}'.format(key)])
-# for key in list(target):
-#     print(arge['{}'.format(key)])
+for key in list(weight):
+    print("{} = ".format(key), arge['{}'.format(key)])
+for key in list(target):
+    print("{} = ".format(key), arge['{}'.format(key)])
 # for key in list(losskeys):
 #     print("{} = ".format(key), arge['{}'.format(key)])
 
-print(len(arge['loss_vals']), arge['loss_vals'])
 
 

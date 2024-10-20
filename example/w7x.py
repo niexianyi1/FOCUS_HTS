@@ -13,7 +13,7 @@ args = {
     'I_optimize':               0,          #       int,    
 
 ## Iteration 
-    'iter_method':              'jax',      #       str,   'jax', 'min', 'nlopt', #'for-min', 'min-for'
+    'iter_method':              'nlopt',      #       str,   'jax', 'min', 'nlopt', #'for-min', 'min-for'
 # nlopt
     'nlopt_algorithm':          'LD_MMA',   #       str,     https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
     'stop_criteria':             1e-6,      #       float,  
@@ -23,8 +23,8 @@ args = {
     'minimize_tol':             1e-2,       #   float,                                  
 # jax
     'number_iteration':         0,          #      int,    
-    'optimizer':           'momentum',      #    str,    https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html#jax.example_libraries.optimizers.constant
-    'step_size':           1e-5,            #       float,                       
+    'optimizer':                'momentum',      #    str,    https://jax.readthedocs.io/en/latest/jax.example_libraries.optimizers.html#jax.example_libraries.optimizers.constant
+    'step_size':                1e-5,            #       float,                       
     
 ### Coil 
 ## Coil parameters
@@ -42,7 +42,7 @@ args = {
 
 
 # Fourier
-    'number_fourier_coils':        6,       # (nfc) int,   
+    'number_fourier_coils':     6,          # (nfc) int,   
                      
 # Bspline
     'number_control_points':    32,         # (ncp) int,    
@@ -50,7 +50,7 @@ args = {
 # # Bspline Local optimization
     'optimize_location_nic':    [0],        #       list,   
     'optimize_location_ns':                 #       list,   
-                [[[0, 64]]],               
+                                [[[0, 64]]],               
 
 ## Finite-build 
     'length_calculate':         0,          #       int,    
@@ -71,7 +71,7 @@ args = {
     'total_current_I':          0,          #       int,   
 
 ## Magnetic surface
-    'number_theta':             32,         # (nt)  int,    \theta(poloidal)                             
+    'number_theta':             40,         # (nt)  int,    \theta(poloidal)                             
     'number_zeta':              128,        # (nz)  int,    \zeta(toroidal)                    
     'surface_file':                         #       str,   
             'initfiles/w7x/plasma.boundary',
@@ -117,9 +117,9 @@ args = {
     'target_HTS_force_max':         6.9e6,      #       float,    
 
 ### Save 
-    'save_hdf5' :               0,          #       int,    
+    'save_hdf5' :               1,          #       int,    
     'out_hdf5':                             #       str,    'h5'
-        'results/w7x/example.h5',   
+        'results/w7x/1.h5',   
 
     'save_makegrid' :           0,          #       int,       
     'out_coil_makegrid':                    #       str,    

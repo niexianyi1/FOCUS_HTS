@@ -122,10 +122,14 @@ def quadratic_flux(args, I, dl, coil, surface_data):
     Bmax = np.max(np.linalg.norm(B, axis=-1))
     bn = np.sum(nn * B, axis=-1)
     if args['Bn_background'] != 0:
-        Bn = abs(bn + args['Bn_background_surface'])
+        Bn = bn + args['Bn_background_surface']
     else:
-        Bn = abs(bn)
-    Bn_mean = np.sum(Bn / np.linalg.norm(B, axis=-1) * sg) / np.sum(sg)
+        Bn = bn
+
+    Bn_mean = np.sum(abs(Bn) / np.linalg.norm(B, axis=-1) * sg) / np.sum(sg)
+
+    # Bn_mean = np.sum((Bn)**2 / np.linalg.norm(B, axis=-1) * sg) / np.sum(sg)
+
     return  Bn_mean, Bmax, B, Bn
 
 
@@ -247,7 +251,7 @@ def Jcrit(args, B_coil, strain, B_coil_theta):
         print('warning: magnetic field in coils over the critical field of HTS.')
 
     jc = jc0 / (1 + (k2*(B_coil*np.cos(B_coil_theta))**2 + 
-            (B_coil*np.sin(B_coil_theta))**2)**0.5 / B_self) ** beta
+            (B_coil*np.sin(B_coil_theta))**2)**0.5 / B_coil) ** beta
     return jc, Bc
 
 def calculate_force(I, B_reg, dl):  
@@ -310,6 +314,7 @@ def loss_save(args, coil_output_func, params, surface_data):
     print('loss_force_mean =  ', force_mean, 'N')
     print('loss_B_coil_max = ', B_coil_max, 'T')
     print('loss_HTS_Icrit = ', I_coil_crit, 'A')
+    print('loss_HTS_jcrit = ', j_crit, 'GA/m2')
     
     loss_end = {
         'loss_Bn_mean'      :   Bn_mean,

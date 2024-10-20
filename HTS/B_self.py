@@ -141,7 +141,7 @@ def B_reg_rec(args, I, coil, dl, a, b, delta, curva, binormal, der2):
         # B3 = mu_0*I[i]*np.cross(dl_reg/dt, der2[i]) * np.sum((1-np.cos(phi[np.newaxis, :]-phi[:, np.newaxis]))/
         #     ((2-2*np.cos(phi[np.newaxis, :]-phi[:, np.newaxis]))*np.linalg.norm(dl_reg/dt)**2 + delta[i]*a[i]*b[i]) ** (3/2)
         #                 ,axis=0)
-        # Breg = Breg.at[i].add(B1+B2-B3)
+        # Breg = Breg.at[i].add(B1-B3)
 
     return Breg
 
