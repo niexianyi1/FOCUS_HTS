@@ -113,7 +113,10 @@ def read_plasma(args):
         return np.concatenate((x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis = -1)
 
     def get_plasma_boundary(R, Z, NZ, NT, Nfp, MT, MZ):
-        zeta = np.linspace(0,2 * np.pi, NZ + 1)[:-1] + np.pi /NZ
+        if args['stellarator_symmetry'] == 1:
+            zeta = np.linspace(0, np.pi / Nfp, int(NZ/2) + 1)[:-1] + np.pi / int(NZ/2) / Nfp / 2
+        else:
+            zeta = np.linspace(0, 2 * np.pi / Nfp, NZ + 1)[:-1] + np.pi / NZ / Nfp
         theta = np.linspace(0, 2 * np.pi, NT + 1)[:-1]
         r = get_xyz(R, Z, zeta, theta, Nfp, MT, MZ)
         drdz = calculate_drdz(R, Z, zeta, theta, Nfp, MT, MZ)

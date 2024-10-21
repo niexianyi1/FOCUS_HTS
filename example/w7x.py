@@ -13,7 +13,7 @@ args = {
     'I_optimize':               0,          #       int,    
 
 ## Iteration 
-    'iter_method':              'nlopt',      #       str,   'jax', 'min', 'nlopt', #'for-min', 'min-for'
+    'iter_method':              'jax',      #       str,   'jax', 'min', 'nlopt', #'for-min', 'min-for'
 # nlopt
     'nlopt_algorithm':          'LD_MMA',   #       str,     https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
     'stop_criteria':             1e-6,      #       float,  
@@ -72,7 +72,7 @@ args = {
 
 ## Magnetic surface
     'number_theta':             40,         # (nt)  int,    \theta(poloidal)                             
-    'number_zeta':              128,        # (nz)  int,    \zeta(toroidal)                    
+    'number_zeta':              64,        # (nz)  int,    \zeta(toroidal)                    
     'surface_file':                         #       str,   
             'initfiles/w7x/plasma.boundary',
 
@@ -117,7 +117,7 @@ args = {
     'target_HTS_force_max':         6.9e6,      #       float,    
 
 ### Save 
-    'save_hdf5' :               1,          #       int,    
+    'save_hdf5' :               0,          #       int,    
     'out_hdf5':                             #       str,    'h5'
         'results/w7x/1.h5',   
 

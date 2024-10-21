@@ -126,9 +126,10 @@ args = {
     # 0: no total current limit; if not 0, it should be the sum of modular coils current.(Recommended)
 
 ## Magnetic surface
-    'number_theta':                 40,         # (nt)  int,    磁面上\theta(极向)的网格点数                    
-    'number_zeta':                  128,        # (nz)  int,    磁面上\zeta(环向)的网格点数     
-    # The number of grid points \theta(poloidal) and \zeta(toroidal) on the magnetic surface                          
+    'number_theta':                 40,         # (nt)  int,                        
+    'number_zeta':                  64,         # (nz)  int,       
+    # The number of grid points \theta(poloidal) and \zeta(toroidal) on the magnetic surface.
+    # The 'number_zeta' is the number for one period.                  
     'surface_file':                             #       str,   
                 'initfiles/w7x/plasma.boundary',
     # Magnetic surface data file.
@@ -192,9 +193,10 @@ args = {
 
 ### Save
     # 0：not save, 1：save. 
+
     'save_hdf5' :                   0,          #       int,    
     # Save hdf5 file with most parameters.
-    'out_hdf5':                                 #       str,    hdf5, 输出参数
+    'out_hdf5':                                 #       str,   
                 'results/test/lossno_test/f2n4_1.h5',       
 
     'save_makegrid' :               0,          #       int,  
