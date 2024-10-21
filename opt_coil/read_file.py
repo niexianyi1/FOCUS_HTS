@@ -113,7 +113,7 @@ def read_plasma(args):
         return np.concatenate((x[:, :, np.newaxis], y[:, :, np.newaxis], z[:, :, np.newaxis]), axis = -1)
 
     def get_plasma_boundary(R, Z, NZ, NT, Nfp, MT, MZ):
-        zeta = np.linspace(0,2 * np.pi, NZ + 1)[:-1]
+        zeta = np.linspace(0,2 * np.pi, NZ + 1)[:-1] + np.pi /NZ
         theta = np.linspace(0, 2 * np.pi, NT + 1)[:-1]
         r = get_xyz(R, Z, zeta, theta, Nfp, MT, MZ)
         drdz = calculate_drdz(R, Z, zeta, theta, Nfp, MT, MZ)
